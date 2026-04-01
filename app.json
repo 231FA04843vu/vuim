@@ -1,4 +1,17 @@
 {
-  "name": "collegebustrack",
-  "displayName": "collegebustrack"
+  "name": "vuim",
+  "displayName": "vuim",
+  "expo": {
+    "name": "Vignan Internal Marks Calculator",
+    "slug": "vuim",
+    "version": "1.0.0",
+    "android": {
+      "package": "com.vuim"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "ffbb3438-75d1-40b3-8dbe-1e11ef3ab472"
+      }
+    }
+  }
 }

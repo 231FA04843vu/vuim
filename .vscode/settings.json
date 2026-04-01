@@ -1,0 +1,4 @@
+{
+    "cmake.sourceDirectory": "${workspaceFolder}/android/app",
+    "java.configuration.updateBuildConfiguration": "interactive"
+}

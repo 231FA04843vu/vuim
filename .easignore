@@ -1,0 +1,36 @@
+# Keep EAS upload minimal and deterministic
+
+# Dependencies and local tooling
+node_modules/
+.bundle/
+.vscode/
+
+# Local/OS artifacts
+.DS_Store
+*.log
+
+# Android generated and local-only artifacts
+android/.gradle/
+android/.kotlin/
+android/build/
+android/app/build/
+android/app/.cxx/
+android/build-output.txt
+android/build.log
+android/local.properties
+android/react-native-gradle-plugin/build/
+
+# iOS generated artifacts
+ios/build/
+ios/Pods/
+
+# Generic generated build artifacts
+build/
+.gradle/
+.kotlin/
+.cxx/
+coverage/
+
+# Misc stray local files
+14
+npx
