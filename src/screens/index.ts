@@ -6,4 +6,5 @@ export {default as AboutScreen} from './AboutScreen';
 export {default as AboutDetailScreen} from './AboutDetailScreen';
 export {default as MyTasksScreen} from './MyTasksScreen';
 export {default as AICoachScreen} from './AICoachScreen';
+export {default as LiveTalkScreen} from './LiveTalkScreen';
 export {default as UpdatesScreen} from './UpdatesScreen';

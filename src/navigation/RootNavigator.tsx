@@ -1,6 +1,6 @@
 import React from 'react';
 import {ActivityIndicator, StyleSheet, View} from 'react-native';
-import {NavigationContainer} from '@react-navigation/native';
+import {NavigationContainer, NavigationContainerRef} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useSubjects} from '../context/SubjectsContext';
 import {RootStackParamList} from './types';
@@ -15,6 +15,7 @@ import {
   AboutDetailScreen,
   MyTasksScreen,
   AICoachScreen,
+  LiveTalkScreen,
   UpdatesScreen,
 } from '../screens';
 import {darkPalette, lightPalette} from '../theme';
@@ -24,9 +25,10 @@ const Stack = createNativeStackNavigator<RootStackParamList>();
 interface RootNavigatorProps {
   onReady?: () => void;
   initialRouteName?: keyof RootStackParamList;
+  navigationRef?: React.Ref<NavigationContainerRef<RootStackParamList>>;
 }
 
-export const RootNavigator = ({ onReady, initialRouteName = 'Splash' }: RootNavigatorProps) => {
+export const RootNavigator = ({ onReady, initialRouteName = 'Splash', navigationRef }: RootNavigatorProps) => {
   const {loading, isDarkMode} = useSubjects();
   const palette = isDarkMode ? darkPalette : lightPalette;
 
@@ -39,7 +41,7 @@ export const RootNavigator = ({ onReady, initialRouteName = 'Splash' }: RootNavi
   }
 
   return (
-    <NavigationContainer>
+    <NavigationContainer ref={navigationRef} onReady={onReady}>
       <Stack.Navigator
         initialRouteName={initialRouteName}
         screenOptions={{
@@ -55,6 +57,7 @@ export const RootNavigator = ({ onReady, initialRouteName = 'Splash' }: RootNavi
         <Stack.Screen name="SavedRecords" component={SavedRecordsScreen} />
         <Stack.Screen name="SubjectPerformance" component={SubjectPerformanceScreen} />
         <Stack.Screen name="AICoach" component={AICoachScreen} />
+        <Stack.Screen name="LiveTalk" component={LiveTalkScreen} />
         <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Updates" component={UpdatesScreen} />
         <Stack.Screen name="MyTasks" component={MyTasksScreen} />

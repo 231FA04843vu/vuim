@@ -83,15 +83,15 @@ export const radius = {
 
 export const typography = {
   display: {
-    ios: 'AvenirNext-Bold',
     android: 'sans-serif-medium',
+    default: 'sans-serif-medium',
   },
   heading: {
-    ios: 'AvenirNext-DemiBold',
     android: 'sans-serif-medium',
+    default: 'sans-serif-medium',
   },
   body: {
-    ios: 'AvenirNext-Regular',
     android: 'sans-serif',
+    default: 'sans-serif',
   },
 };

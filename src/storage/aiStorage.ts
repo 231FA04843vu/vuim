@@ -1,28 +1,47 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {DEFAULT_GEMINI_API_KEY} from '../config/ai';
+import {DEFAULT_OPENROUTER_API_KEY} from '../config/ai';
 import {AIMessage, AITask, CoachTimeBlock} from '../types';
 
-const GEMINI_API_KEY = '@vuim/gemini_api_key';
+const OPENROUTER_API_KEY = '@vuim/openrouter_api_key';
+const LEGACY_GEMINI_API_KEY = '@vuim/gemini_api_key';
 const AI_TIMETABLE_KEY = '@vuim/ai_timetable';
 const AI_CHAT_SESSION_KEY = '@vuim/ai_chat_session';
 const AI_PLAN_SNAPSHOT_KEY = '@vuim/ai_plan_snapshot';
 const AI_TASKS_KEY = '@vuim/ai_tasks';
+const AI_STUDY_MATERIALS_KEY = '@vuim/ai_study_materials';
 
-export const loadGeminiApiKey = async (): Promise<string> => {
+export const loadAiApiKey = async (): Promise<string> => {
   try {
-    return (await AsyncStorage.getItem(GEMINI_API_KEY)) ?? DEFAULT_GEMINI_API_KEY;
+    const openRouterKey = await AsyncStorage.getItem(OPENROUTER_API_KEY);
+    if (openRouterKey?.trim()) {
+      return openRouterKey;
+    }
+
+    // Keep backward compatibility for existing installs using the previous key slot.
+    const legacyGeminiKey = await AsyncStorage.getItem(LEGACY_GEMINI_API_KEY);
+    if (legacyGeminiKey?.trim()) {
+      await AsyncStorage.setItem(OPENROUTER_API_KEY, legacyGeminiKey.trim());
+      return legacyGeminiKey.trim();
+    }
+
+    return DEFAULT_OPENROUTER_API_KEY;
   } catch {
-    return DEFAULT_GEMINI_API_KEY;
+    return DEFAULT_OPENROUTER_API_KEY;
   }
 };
 
-export const saveGeminiApiKey = async (apiKey: string) => {
-  await AsyncStorage.setItem(GEMINI_API_KEY, apiKey.trim());
+export const saveAiApiKey = async (apiKey: string) => {
+  await AsyncStorage.setItem(OPENROUTER_API_KEY, apiKey.trim());
 };
 
-export const clearGeminiApiKey = async () => {
-  await AsyncStorage.removeItem(GEMINI_API_KEY);
+export const clearAiApiKey = async () => {
+  await AsyncStorage.multiRemove([OPENROUTER_API_KEY, LEGACY_GEMINI_API_KEY]);
 };
+
+// Backward-compatible aliases used by older imports.
+export const loadGeminiApiKey = loadAiApiKey;
+export const saveGeminiApiKey = saveAiApiKey;
+export const clearGeminiApiKey = clearAiApiKey;
 
 export const loadAiTimetable = async (): Promise<CoachTimeBlock[]> => {
   try {
@@ -101,4 +120,20 @@ export const saveAiTasks = async (tasks: AITask[]) => {
 
 export const clearAiTasks = async () => {
   await AsyncStorage.removeItem(AI_TASKS_KEY);
+};
+
+export const loadAiStudyMaterials = async (): Promise<string> => {
+  try {
+    return (await AsyncStorage.getItem(AI_STUDY_MATERIALS_KEY)) ?? '';
+  } catch {
+    return '';
+  }
+};
+
+export const saveAiStudyMaterials = async (materialsText: string) => {
+  await AsyncStorage.setItem(AI_STUDY_MATERIALS_KEY, materialsText.trim());
+};
+
+export const clearAiStudyMaterials = async () => {
+  await AsyncStorage.removeItem(AI_STUDY_MATERIALS_KEY);
 };

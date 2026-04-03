@@ -90,7 +90,7 @@ Primary keys and cache domains used internally:
 - @vuim/records (subject and marks records)
 - @vuim/prefs (theme and preference state)
 - @vuim/notifications (local notification history)
-- @vuim/gemini_api_key (optional user-provided AI key)
+- @vuim/openrouter_api_key (optional AI provider key)
 
 SECTION 3: PROCESSING SCOPE
 The app processes entered academic values for calculation and display workflows. Optional external integrations are user initiated and should only be used with non-sensitive content when possible.

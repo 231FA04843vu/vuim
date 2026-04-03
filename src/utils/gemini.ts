@@ -1,35 +1,14 @@
 import {AIMessage, CoachPlanResponse, SubjectRecord} from '../types';
+import {
+  DEFAULT_OPENROUTER_MODEL,
+  OPENROUTER_API_URL,
+  OPENROUTER_FALLBACK_MODELS,
+} from '../config/ai';
 
-const API_VERSIONS = ['v1beta', 'v1'];
-const FALLBACK_MODELS = ['gemini-2.0-flash', 'gemini-2.0-flash-lite', 'gemini-1.5-flash'];
-
-type GeminiModel = {
-  name?: string;
-  supportedGenerationMethods?: string[];
-};
-
-const normalizeModelName = (name: string) => name.replace(/^models\//, '');
-
-const discoverModels = async (apiKey: string, apiVersion: string): Promise<string[]> => {
-  const listUrl = `https://generativelanguage.googleapis.com/${apiVersion}/models?key=${encodeURIComponent(apiKey)}`;
-  const response = await fetch(listUrl);
-  if (!response.ok) {
-    return [];
-  }
-
-  const data = (await response.json()) as {models?: GeminiModel[]};
-  const modelNames =
-    data.models
-      ?.filter(model => model.supportedGenerationMethods?.includes('generateContent'))
-      .map(model => (model.name ? normalizeModelName(model.name) : ''))
-      .filter(Boolean) ?? [];
-
-  return modelNames;
-};
-
-type GeminiPayload = {
+type OpenRouterPayload = {
   apiKey: string;
   prompt: string;
+  model?: string;
 };
 
 const summarizeRecords = (records: SubjectRecord[]) => {
@@ -122,65 +101,85 @@ export const buildMentorPrompt = (records: SubjectRecord[], userMessage: string,
   ].join('\n');
 };
 
-export const requestGeminiText = async ({apiKey, prompt}: GeminiPayload): Promise<string> => {
-  let lastError = 'Unknown Gemini error';
+const extractOpenRouterText = (
+  content: string | Array<{type?: string; text?: string}> | undefined,
+): string => {
+  if (!content) {
+    return '';
+  }
+  if (typeof content === 'string') {
+    return content.trim();
+  }
+  return content
+    .map(part => (typeof part.text === 'string' ? part.text : ''))
+    .join('')
+    .trim();
+};
 
-  for (const apiVersion of API_VERSIONS) {
-    const discoveredModels = await discoverModels(apiKey, apiVersion);
-    const modelsToTry = Array.from(new Set([...discoveredModels, ...FALLBACK_MODELS]));
+export const requestOpenRouterText = async ({apiKey, prompt, model}: OpenRouterPayload): Promise<string> => {
+  let lastError = 'Unknown OpenRouter error';
+  const modelsToTry = Array.from(new Set([model ?? DEFAULT_OPENROUTER_MODEL, ...OPENROUTER_FALLBACK_MODELS]));
 
-    for (const model of modelsToTry) {
-      const endpoint = `https://generativelanguage.googleapis.com/${apiVersion}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`;
-      const response = await fetch(endpoint, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              role: 'user',
-              parts: [{text: prompt}],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.6,
-            topP: 0.9,
-            topK: 32,
-            maxOutputTokens: 1024,
+  type OpenRouterResponse = {
+    choices?: Array<{message?: {content?: string | Array<{type?: string; text?: string}>}}>;
+    error?: {message?: string};
+  };
+
+  for (const currentModel of modelsToTry) {
+    const response = await fetch(OPENROUTER_API_URL, {
+      method: 'POST',
+      headers: {
+        Authorization: `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+        'HTTP-Referer': 'https://github.com/231FA04843vu/vuim',
+        'X-Title': 'VUIM AI Coach',
+      },
+      body: JSON.stringify({
+        model: currentModel,
+        messages: [
+          {
+            role: 'user',
+            content: prompt,
           },
-        }),
-      });
+        ],
+        temperature: 0.6,
+        max_tokens: 1024,
+      }),
+    });
 
-      if (!response.ok) {
-        const errorText = await response.text();
-        lastError = `Gemini request failed (${response.status}) on ${model} (${apiVersion}): ${errorText}`;
-        if (response.status === 404) {
-          continue;
-        }
-        throw new Error(lastError);
-      }
+    const rawText = await response.text();
+    let data: OpenRouterResponse = {};
 
-      const data = (await response.json()) as {
-        candidates?: Array<{
-          content?: {
-            parts?: Array<{text?: string}>;
-          };
-        }>;
-      };
-
-      const text = data.candidates?.[0]?.content?.parts?.map(part => part.text ?? '').join('').trim();
-
-      if (text) {
-        return text;
-      }
-
-      lastError = `Gemini returned an empty response on ${model} (${apiVersion}).`;
+    try {
+      data = JSON.parse(rawText) as OpenRouterResponse;
+    } catch {
+      data = {};
     }
+
+    if (!response.ok) {
+      lastError =
+        data?.error?.message ?? `OpenRouter request failed (${response.status}) on ${currentModel}: ${rawText}`;
+
+      // Try a different model for provider/model-not-found/temporary failures.
+      if (response.status === 404 || response.status === 429 || response.status >= 500) {
+        continue;
+      }
+      throw new Error(lastError);
+    }
+
+    const text = extractOpenRouterText(data?.choices?.[0]?.message?.content);
+    if (text) {
+      return text;
+    }
+
+    lastError = `OpenRouter returned an empty response on ${currentModel}.`;
   }
 
   throw new Error(lastError);
 };
+
+// Backward-compatible alias while the file name remains gemini.ts.
+export const requestGeminiText = requestOpenRouterText;
 
 const parseJsonBlock = (input: string) => {
   const cleaned = input.trim().replace(/^```json\s*/i, '').replace(/^```/, '').replace(/```$/, '').trim();
