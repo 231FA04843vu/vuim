@@ -37,7 +37,7 @@ const SideDrawerMenu = ({visible, onClose, palette, navigation}: Props) => {
   const {themeMode, setThemeMode, clearCache, clearData, toggleTheme} = useSubjects();
   const translateX = useRef(new Animated.Value(-320)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const [releaseVersion, setReleaseVersion] = React.useState('v1.3.4');
+  const [releaseVersion, setReleaseVersion] = React.useState('v1.3.5');
 
   useEffect(() => {
     Animated.parallel([

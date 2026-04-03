@@ -4,6 +4,14 @@
     android:layout_height="match_parent"
     android:background="#101418">
 
+    <ImageView
+        android:id="@+id/splash_icon"
+        android:layout_width="96dp"
+        android:layout_height="96dp"
+        android:layout_gravity="center"
+        android:src="@mipmap/ic_launcher"
+        android:contentDescription="@string/app_name" />
+
     <com.lottiefiles.dotlottie.core.widget.DotLottieAnimation
         android:id="@+id/lottie_view"
         android:layout_width="220dp"

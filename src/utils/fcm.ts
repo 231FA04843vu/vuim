@@ -1,12 +1,44 @@
-import {Platform} from 'react-native';
+import {PermissionsAndroid, Platform} from 'react-native';
 import messaging from '@react-native-firebase/messaging';
 import {notify} from './notify';
 import {pushSystemUpdateNotification} from './updateNotifier';
 
 export const RELEASE_TOPIC = 'vuim_updates';
 
+const ensureAndroidNotificationPermission = async () => {
+  if (Platform.OS !== 'android') {
+    return true;
+  }
+
+  // Android 12 and below grant notification access at install time.
+  if (typeof Platform.Version !== 'number' || Platform.Version < 33) {
+    return true;
+  }
+
+  const permission = PermissionsAndroid.PERMISSIONS.POST_NOTIFICATIONS;
+  const alreadyGranted = await PermissionsAndroid.check(permission);
+  if (alreadyGranted) {
+    return true;
+  }
+
+  const result = await PermissionsAndroid.request(permission, {
+    title: 'Allow notifications',
+    message: 'VUIM needs notification access to alert you about new app updates.',
+    buttonPositive: 'Allow',
+    buttonNegative: 'Not now',
+  });
+
+  return result === PermissionsAndroid.RESULTS.GRANTED;
+};
+
 export const bootstrapFcm = async () => {
   if (Platform.OS !== 'android') {
+    return;
+  }
+
+  const canPostNotifications = await ensureAndroidNotificationPermission();
+  if (!canPostNotifications) {
+    notify('Notifications are disabled. Enable them in app settings.');
     return;
   }
 
