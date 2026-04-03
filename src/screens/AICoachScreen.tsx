@@ -15,7 +15,7 @@ import {
 import Ionicons from '@react-native-vector-icons/ionicons';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import Voice, {SpeechErrorEvent, SpeechResultsEvent} from '@react-native-voice/voice';
-import {errorCodes, isErrorWithCode, pick, types} from '@react-native-documents/picker';
+import {errorCodes, isErrorWithCode, keepLocalCopy, pick, types} from '@react-native-documents/picker';
 import Tts from 'react-native-tts';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import GlassCard from '../components/GlassCard';
@@ -51,6 +51,13 @@ import {
 } from '../utils/mobileNotifications';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AICoach'>;
+
+type PendingUpload = {
+  id: string;
+  name: string;
+  summary: string;
+  kind: 'text' | 'image' | 'pdf' | 'doc' | 'other';
+};
 
 const buildFallbackTimetable = (tasks: string[]): CoachTimeBlock[] => {
   const days = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri'];
@@ -90,6 +97,7 @@ const AICoachScreen = ({route, navigation}: Props) => {
   const {addNotification} = useNotifications();
   const palette = isDarkMode ? darkPalette : lightPalette;
   const focusSubject = route.params?.focusSubject?.trim();
+  const aiScope = focusSubject?.toLowerCase() ?? undefined;
   const messagesRef = React.useRef<AIMessage[]>([]);
   const sendMessageRef = React.useRef<(textOverride?: string) => Promise<void>>(async () => {});
   const recognizedTextRef = React.useRef('');
@@ -106,7 +114,7 @@ const AICoachScreen = ({route, navigation}: Props) => {
   const [timetable, setTimetable] = useState<CoachTimeBlock[]>([]);
   const [savedPlan, setSavedPlan] = useState('');
   const [uploadedContext, setUploadedContext] = useState('');
-  const [uploadedNames, setUploadedNames] = useState<string[]>([]);
+  const [pendingUploads, setPendingUploads] = useState<PendingUpload[]>([]);
 
   useEffect(() => {
     messagesRef.current = messages;
@@ -116,10 +124,10 @@ const AICoachScreen = ({route, navigation}: Props) => {
     const hydrate = async () => {
       const [key, storedTimetable, storedMessages, storedPlan, storedMaterials] = await Promise.all([
         loadAiApiKey(),
-        loadAiTimetable(),
-        loadAiChatSession(),
-        loadAiPlanSnapshot(),
-        loadAiStudyMaterials(),
+        loadAiTimetable(aiScope),
+        loadAiChatSession(aiScope),
+        loadAiPlanSnapshot(aiScope),
+        loadAiStudyMaterials(aiScope),
       ]);
       setApiKey(key);
       setTimetable(storedTimetable);
@@ -129,7 +137,7 @@ const AICoachScreen = ({route, navigation}: Props) => {
     };
 
     hydrate();
-  }, []);
+  }, [aiScope]);
 
   const scopedRecords = useMemo(() => {
     if (!focusSubject) {
@@ -147,27 +155,40 @@ const AICoachScreen = ({route, navigation}: Props) => {
 
   const sendMessage = async (textOverride?: string) => {
     const textToSend = (textOverride ?? chatInput).trim();
+    const hasPendingUploads = pendingUploads.length > 0;
 
-    if (!textToSend) {
+    if (!textToSend && !hasPendingUploads) {
       return;
     }
-    if (!apiKey.trim()) {
-      notify('AI service is not configured right now');
+    const resolvedKey = apiKey.trim() || (await loadAiApiKey()).trim();
+    if (!resolvedKey) {
+      notify(__DEV__ ? 'AI key missing in this local build. Install release APK from GitHub Actions.' : 'AI service is not configured right now');
       return;
+    }
+    if (resolvedKey !== apiKey) {
+      setApiKey(resolvedKey);
     }
 
     const history = messagesRef.current;
 
+    const attachmentCaption = hasPendingUploads
+      ? `Attached files:\n${pendingUploads.map(file => `- ${file.name} (${file.kind})`).join('\n')}`
+      : '';
+
+    const finalUserText = [textToSend || 'Please analyze the attached files.', attachmentCaption]
+      .filter(Boolean)
+      .join('\n\n');
+
     const userMessage: AIMessage = {
       id: `${Date.now()}-user`,
       role: 'user',
-      text: textToSend,
+      text: finalUserText,
       createdAt: new Date().toISOString(),
     };
 
     const nextMessages = [...history, userMessage];
     setMessages(nextMessages);
-    await saveAiChatSession(nextMessages);
+    await saveAiChatSession(nextMessages, aiScope);
     setChatInput('');
 
     try {
@@ -176,7 +197,7 @@ const AICoachScreen = ({route, navigation}: Props) => {
       const promptWithUploads = uploadedContext
         ? `${prompt}\n\nUse the following uploaded study material context while planning and explaining:\n${uploadedContext}`
         : prompt;
-      const aiText = await requestOpenRouterText({apiKey: apiKey.trim(), prompt: promptWithUploads});
+      const aiText = await requestOpenRouterText({apiKey: resolvedKey, prompt: promptWithUploads});
       const parsed = extractTimetableFromMentorResponse(aiText);
 
       if (!isSpeechMuted && isTtsReadyRef.current) {
@@ -199,11 +220,11 @@ const AICoachScreen = ({route, navigation}: Props) => {
       };
       const nextWithAi = [...nextMessages, aiMessage];
       setMessages(nextWithAi);
-      await saveAiChatSession(nextWithAi);
+      await saveAiChatSession(nextWithAi, aiScope);
 
       const askedForPlan = /\b(plan|study plan|strategy|roadmap|timetable|schedule)\b/i.test(userMessage.text);
       if (askedForPlan) {
-        await saveAiPlanSnapshot(parsed.cleanText);
+        await saveAiPlanSnapshot(parsed.cleanText, aiScope);
         setSavedPlan(parsed.cleanText);
 
         const textTasks = extractPlanTasksFromText(parsed.cleanText);
@@ -217,7 +238,7 @@ const AICoachScreen = ({route, navigation}: Props) => {
           title,
           createdAt: new Date().toISOString(),
         }));
-        await saveAiTasks(taskObjects);
+        await saveAiTasks(taskObjects, aiScope);
 
         const scheduledPlanCount = await schedulePlanTaskNotifications(merged);
         if (scheduledPlanCount > 0) {
@@ -229,7 +250,7 @@ const AICoachScreen = ({route, navigation}: Props) => {
         }
 
         if (effectiveTimetable.length > 0) {
-          await saveAiTimetable(effectiveTimetable);
+          await saveAiTimetable(effectiveTimetable, aiScope);
           setTimetable(effectiveTimetable);
           const scheduledCount = await scheduleStudyNotifications(effectiveTimetable);
           await addNotification({
@@ -241,7 +262,7 @@ const AICoachScreen = ({route, navigation}: Props) => {
       }
 
       if (!askedForPlan && parsed.timetable.length > 0) {
-        await saveAiTimetable(parsed.timetable);
+        await saveAiTimetable(parsed.timetable, aiScope);
         setTimetable(parsed.timetable);
         const scheduledCount = await scheduleStudyNotifications(parsed.timetable);
         await addNotification({
@@ -256,6 +277,12 @@ const AICoachScreen = ({route, navigation}: Props) => {
         message: parsed.cleanText.slice(0, 120),
         category: 'ai',
       });
+
+      if (hasPendingUploads) {
+        setPendingUploads([]);
+        setUploadedContext('');
+        await saveAiStudyMaterials('', aiScope);
+      }
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI reply failed';
       Alert.alert('AI Error', message);
@@ -314,6 +341,8 @@ const AICoachScreen = ({route, navigation}: Props) => {
       try {
         await Voice.stop();
       } catch {
+        // Ignore stop errors; we still force UI state to off below.
+      } finally {
         setIsListening(false);
       }
       return;
@@ -353,6 +382,87 @@ const AICoachScreen = ({route, navigation}: Props) => {
     ) || lower.endsWith('.txt') || lower.endsWith('.md') || lower.endsWith('.json') || lower.endsWith('.csv');
   };
 
+  const classifyFileKind = (name: string | null, type: string | null): PendingUpload['kind'] => {
+    const lower = (name ?? '').toLowerCase();
+    const mime = (type ?? '').toLowerCase();
+
+    if (
+      mime.startsWith('image/') ||
+      lower.endsWith('.png') ||
+      lower.endsWith('.jpg') ||
+      lower.endsWith('.jpeg') ||
+      lower.endsWith('.webp') ||
+      lower.endsWith('.gif') ||
+      lower.endsWith('.heic')
+    ) {
+      return 'image';
+    }
+
+    if (mime.includes('pdf') || lower.endsWith('.pdf')) {
+      return 'pdf';
+    }
+
+    if (
+      mime.includes('msword') ||
+      mime.includes('wordprocessingml') ||
+      lower.endsWith('.doc') ||
+      lower.endsWith('.docx') ||
+      lower.endsWith('.rtf')
+    ) {
+      return 'doc';
+    }
+
+    if (isLikelyTextFile(name, type)) {
+      return 'text';
+    }
+
+    return 'other';
+  };
+
+  const getReadableFileUri = (file: {
+    uri: string;
+    fileCopyUri?: string | null;
+  }, copiedUri?: string) => {
+    if (copiedUri?.trim()) {
+      return copiedUri;
+    }
+    if (file.fileCopyUri?.trim()) {
+      return file.fileCopyUri;
+    }
+    return file.uri;
+  };
+
+  const buildReadableUriMap = async (
+    files: Array<{uri: string; name: string | null}>,
+  ): Promise<Record<string, string>> => {
+    const candidates = files
+      .map((file, index) => ({
+        uri: file.uri,
+        fileName: file.name?.trim() || `picked-file-${Date.now()}-${index}`,
+      }))
+      .filter(file => file.uri.startsWith('content://'));
+
+    if (candidates.length === 0) {
+      return {};
+    }
+
+    try {
+      const copied = await keepLocalCopy({
+        files: candidates as [{uri: string; fileName: string}, ...Array<{uri: string; fileName: string}>],
+        destination: 'cachesDirectory',
+      });
+
+      return copied.reduce<Record<string, string>>((acc, item) => {
+        if (item.status === 'success') {
+          acc[item.sourceUri] = item.localUri;
+        }
+        return acc;
+      }, {});
+    } catch {
+      return {};
+    }
+  };
+
   const loadFileSnippet = async (uri: string) => {
     try {
       const response = await fetch(uri);
@@ -375,31 +485,50 @@ const AICoachScreen = ({route, navigation}: Props) => {
         return;
       }
 
+      const uriMap = await buildReadableUriMap(
+        picked.slice(0, 5).map(file => ({uri: file.uri, name: file.name})),
+      );
+
       const summaries: string[] = [];
-      const pickedNames: string[] = [];
+      const nextUploads: PendingUpload[] = [];
 
       for (const file of picked.slice(0, 5)) {
         const safeName = file.name ?? 'Unnamed file';
-        pickedNames.push(safeName);
+        const kind = classifyFileKind(file.name, file.type);
         const sizeLabel = file.size ? `${Math.round(file.size / 1024)}KB` : 'size unknown';
         let summary = `File: ${safeName} (${sizeLabel})`;
 
-        if (isLikelyTextFile(file.name, file.type)) {
-          const readUri = file.uri;
+        if (kind === 'text' || kind === 'pdf' || kind === 'doc') {
+          const readUri = getReadableFileUri(
+            file as {uri: string; fileCopyUri?: string | null},
+            uriMap[file.uri],
+          );
           const snippet = await loadFileSnippet(readUri);
           if (snippet) {
             summary += `\nKey content snippet: ${snippet}`;
+          } else {
+            summary += '\nKey content snippet: unavailable on this device for this format.';
           }
+        } else if (kind === 'image') {
+          summary += '\nImage attached for reference. Ask specific questions about this image.';
+        } else {
+          summary += '\nFile attached. Text extraction unavailable for this format.';
         }
 
         summaries.push(summary);
+        nextUploads.push({
+          id: `${Date.now()}-${safeName}-${Math.random().toString(16).slice(2, 7)}`,
+          name: safeName,
+          kind,
+          summary,
+        });
       }
 
-      setUploadedNames(pickedNames);
       const mergedMaterials = summaries.join('\n\n');
       setUploadedContext(mergedMaterials);
-      await saveAiStudyMaterials(mergedMaterials);
-      notify(`${picked.length} study file(s) attached for AI planning context`);
+      setPendingUploads(nextUploads);
+      await saveAiStudyMaterials(mergedMaterials, aiScope);
+      notify(`${picked.length} file(s) attached. Send a message to include them.`);
     } catch (error) {
       if (isErrorWithCode(error)) {
         if (error.code === errorCodes.OPERATION_CANCELED || error.code === errorCodes.IN_PROGRESS) {
@@ -416,23 +545,31 @@ const AICoachScreen = ({route, navigation}: Props) => {
   };
 
   const clearTimetable = async () => {
-    await clearAiTimetable();
+    await clearAiTimetable(aiScope);
     await clearScheduledStudyNotifications();
     setTimetable([]);
     notify('Stored timetable and reminders cleared');
   };
 
   const clearPlanAndSession = async () => {
-    await clearAiPlanSnapshot();
-    await clearAiChatSession();
-    await clearAiTasks();
-    await clearAiStudyMaterials();
+    await clearAiPlanSnapshot(aiScope);
+    await clearAiChatSession(aiScope);
+    await clearAiTasks(aiScope);
+    await clearAiStudyMaterials(aiScope);
     await clearScheduledPlanNotifications();
     setSavedPlan('');
     setMessages([]);
     setUploadedContext('');
-    setUploadedNames([]);
+    setPendingUploads([]);
     notify('AI chat session and saved plan cleared');
+  };
+
+  const removePendingUpload = (id: string) => {
+    const next = pendingUploads.filter(file => file.id !== id);
+    setPendingUploads(next);
+    const mergedMaterials = next.map(file => file.summary).join('\n\n');
+    setUploadedContext(mergedMaterials);
+    void saveAiStudyMaterials(mergedMaterials, aiScope);
   };
 
   const voiceNoteInfo = () => {
@@ -471,7 +608,6 @@ const AICoachScreen = ({route, navigation}: Props) => {
 
     Voice.onSpeechError = (_event: SpeechErrorEvent) => {
       setIsListening(false);
-      notify('Voice recognition failed');
     };
 
     Voice.onSpeechEnd = () => {
@@ -548,7 +684,7 @@ const AICoachScreen = ({route, navigation}: Props) => {
             </Pressable>
             <Pressable
               style={[styles.iconAction, {borderColor: palette.cardBorder, backgroundColor: palette.surface}]}
-              onPress={() => navigation.navigate('MyTasks')}
+              onPress={() => navigation.navigate('MyTasks', {focusSubject})}
               accessibilityLabel="Open My Tasks">
               <Ionicons name="checkbox-outline" size={18} color={palette.accent} />
             </Pressable>
@@ -613,19 +749,27 @@ const AICoachScreen = ({route, navigation}: Props) => {
           </View>
         )}
 
-        {uploadedNames.length > 0 && (
-          <View style={[styles.planStrip, {borderColor: palette.cardBorder, backgroundColor: palette.accentSoft}]}>
-            <Text numberOfLines={2} style={[styles.planStripText, {color: palette.textPrimary}]}>
-              {uploadedNames.length} file(s) ready: {uploadedNames.join(', ')}
-            </Text>
-          </View>
-        )}
-
         <View style={[styles.composer, {borderColor: palette.cardBorder, backgroundColor: palette.backgroundAlt}]}> 
+          {pendingUploads.length > 0 && (
+            <View style={styles.pendingList}>
+              {pendingUploads.map(file => (
+                <View key={file.id} style={[styles.pendingItem, {borderColor: palette.cardBorder, backgroundColor: palette.surface}]}> 
+                  <View style={styles.pendingMeta}>
+                    <Text numberOfLines={1} style={[styles.pendingName, {color: palette.textPrimary}]}>{file.name}</Text>
+                    <Text style={[styles.pendingKind, {color: palette.textSecondary}]}>{file.kind.toUpperCase()}</Text>
+                  </View>
+                  <Pressable onPress={() => removePendingUpload(file.id)} accessibilityLabel="Remove attached file">
+                    <Ionicons name="close-circle" size={18} color={palette.danger} />
+                  </Pressable>
+                </View>
+              ))}
+            </View>
+          )}
+
           <TextInput
             value={chatInput}
             onChangeText={setChatInput}
-            placeholder="Type your need here..."
+            placeholder={pendingUploads.length > 0 ? 'Ask about attached files...' : 'Type your need here...'}
             placeholderTextColor={palette.textMuted}
             multiline
             style={[styles.composerInput, {color: palette.textPrimary}]}
@@ -818,6 +962,33 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderRadius: 16,
     padding: 10,
+  },
+  pendingList: {
+    gap: 8,
+    marginBottom: 8,
+  },
+  pendingItem: {
+    borderWidth: 1,
+    borderRadius: 10,
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  pendingMeta: {
+    flexShrink: 1,
+  },
+  pendingName: {
+    fontSize: 13,
+    fontFamily: Platform.select(typography.body),
+    fontWeight: '700',
+  },
+  pendingKind: {
+    marginTop: 2,
+    fontSize: 11,
+    fontFamily: Platform.select(typography.body),
+    fontWeight: '600',
   },
   composerInput: {
     minHeight: 44,

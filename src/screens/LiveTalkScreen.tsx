@@ -28,6 +28,7 @@ const LiveTalkScreen = ({route, navigation}: Props) => {
   const {records, isDarkMode} = useSubjects();
   const palette = isDarkMode ? darkPalette : lightPalette;
   const focusSubject = route.params?.focusSubject?.trim();
+  const aiScope = focusSubject?.toLowerCase() ?? undefined;
 
   const [apiKey, setApiKey] = useState('');
   const [isMuted, setIsMuted] = useState(false);
@@ -102,13 +103,13 @@ const LiveTalkScreen = ({route, navigation}: Props) => {
 
   useEffect(() => {
     const hydrate = async () => {
-      const [key, materials] = await Promise.all([loadAiApiKey(), loadAiStudyMaterials()]);
+      const [key, materials] = await Promise.all([loadAiApiKey(), loadAiStudyMaterials(aiScope)]);
       setApiKey(key);
       setStudyMaterials(materials);
     };
 
     hydrate();
-  }, []);
+  }, [aiScope]);
 
   const requestMicPermission = async () => {
     if (Platform.OS !== 'android') {
@@ -133,6 +134,8 @@ const LiveTalkScreen = ({route, navigation}: Props) => {
       await Voice.stop();
     } catch {
       // Ignore stop failures.
+    } finally {
+      setIsListening(false);
     }
 
     if (isTtsReadyRef.current) {
@@ -164,9 +167,13 @@ const LiveTalkScreen = ({route, navigation}: Props) => {
   };
 
   const askMentor = async (spokenText: string) => {
-    if (!apiKey.trim()) {
-      notify('AI service is not configured right now');
+    const resolvedKey = apiKey.trim() || (await loadAiApiKey()).trim();
+    if (!resolvedKey) {
+      notify(__DEV__ ? 'AI key missing in this local build. Install release APK from GitHub Actions.' : 'AI service is not configured right now');
       return;
+    }
+    if (resolvedKey !== apiKey) {
+      setApiKey(resolvedKey);
     }
 
     setLastHeard(spokenText);
@@ -186,7 +193,7 @@ const LiveTalkScreen = ({route, navigation}: Props) => {
       const promptWithMaterials = studyMaterials
         ? `${prompt}\n\nUse the following uploaded study material context while helping:\n${studyMaterials}`
         : prompt;
-      const aiText = await requestOpenRouterText({apiKey: apiKey.trim(), prompt: promptWithMaterials});
+      const aiText = await requestOpenRouterText({apiKey: resolvedKey, prompt: promptWithMaterials});
       const parsed = extractTimetableFromMentorResponse(aiText);
       const aiReply = parsed.cleanText;
       setLastReply(aiReply);
@@ -198,7 +205,7 @@ const LiveTalkScreen = ({route, navigation}: Props) => {
         createdAt: new Date().toISOString(),
       };
       chatHistoryRef.current = [...chatHistoryRef.current, aiMessage].slice(-20);
-      await saveAiChatSession(chatHistoryRef.current);
+      await saveAiChatSession(chatHistoryRef.current, aiScope);
 
       if (isTtsReadyRef.current && !isMutedRef.current) {
         try {
@@ -259,6 +266,21 @@ const LiveTalkScreen = ({route, navigation}: Props) => {
         }, 150);
       }
     }
+  };
+
+  const restartListening = async () => {
+    const granted = await requestMicPermission();
+    if (!granted) {
+      notify('Microphone permission is required for Live Talk');
+      return;
+    }
+
+    if (!isLiveRef.current) {
+      isLiveRef.current = true;
+    }
+    await stopSpeechEngines();
+    setIsAiSpeaking(false);
+    await beginListening();
   };
 
   useEffect(() => {
@@ -414,6 +436,9 @@ const LiveTalkScreen = ({route, navigation}: Props) => {
       <View style={styles.controlsRow}>
         <Pressable style={styles.controlButton} onPress={toggleMute} accessibilityLabel={isMuted ? 'Unmute' : 'Mute'}>
           <Ionicons name={isMuted ? 'volume-mute' : 'volume-high'} size={28} color="#FFFFFF" />
+        </Pressable>
+        <Pressable style={styles.controlButton} onPress={() => void restartListening()} accessibilityLabel="Restart listening">
+          <Ionicons name={isListening ? 'mic' : 'mic-outline'} size={28} color="#FFFFFF" />
         </Pressable>
         <Pressable
           style={[styles.controlButton, styles.endButton]}

@@ -8,7 +8,7 @@ export type RootStackParamList = {
   LiveTalk: {focusSubject?: string} | undefined;
   Notifications: undefined;
   Updates: undefined;
-  MyTasks: undefined;
+  MyTasks: {focusSubject?: string} | undefined;
   AboutApp: undefined;
   AboutDetail: {
     title: string;
