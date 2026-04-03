@@ -2,6 +2,7 @@ import React, {useEffect, useMemo, useState} from 'react';
 import {
   ActivityIndicator,
   Alert,
+  FlatList,
   Platform,
   Pressable,
   ScrollView,
@@ -23,10 +24,7 @@ import {buildChatPrompt, buildCoachPrompt, parseCoachPlanResponse, requestGemini
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AICoach'>;
 
-const createMessageId = (role: 'user' | 'assistant') =>
-  `${Date.now()}-${role}-${Math.random().toString(36).slice(2, 7)}`;
-
-const AICoachScreen = ({route}: Props) => {
+const AICoachScreen = ({navigation, route}: Props) => {
   const {records, isDarkMode} = useSubjects();
   const palette = isDarkMode ? darkPalette : lightPalette;
   const focusSubject = route.params?.focusSubject?.trim();
@@ -126,13 +124,13 @@ const AICoachScreen = ({route}: Props) => {
     }
 
     const userMessage: AIMessage = {
-      id: createMessageId('user'),
+      id: `${Date.now()}-user`,
       role: 'user',
       text: chatInput.trim(),
       createdAt: new Date().toISOString(),
     };
 
-    setMessages(prev => [...prev, userMessage]);
+    setMessages(prev => [userMessage, ...prev]);
     setChatInput('');
 
     try {
@@ -140,12 +138,12 @@ const AICoachScreen = ({route}: Props) => {
       const prompt = buildChatPrompt(scopedRecords, userMessage.text);
       const aiText = await requestGeminiText({apiKey: apiKey.trim(), prompt});
       const aiMessage: AIMessage = {
-        id: createMessageId('assistant'),
+        id: `${Date.now()}-ai`,
         role: 'assistant',
         text: aiText,
         createdAt: new Date().toISOString(),
       };
-      setMessages(prev => [...prev, aiMessage]);
+      setMessages(prev => [aiMessage, ...prev]);
     } catch (error) {
       const message = error instanceof Error ? error.message : 'AI reply failed';
       Alert.alert('AI Error', message);
@@ -244,44 +242,16 @@ const AICoachScreen = ({route}: Props) => {
 
               <View style={[styles.outputBox, {borderColor: palette.cardBorder, backgroundColor: palette.backgroundAlt}]}> 
                 <Text style={[styles.outputHeading, {color: palette.textPrimary}]}>Priority Actions</Text>
-                {coachPlan.priorityActions.length === 0 ? (
-                  <Text style={[styles.outputText, {color: palette.textMuted}]}>No priority actions generated yet.</Text>
-                ) : (
-                  coachPlan.priorityActions.map((action, index) => (
-                    <View
-                      key={`${action}-${index}`}
-                      style={[
-                        styles.planStepCard,
-                        {borderColor: palette.cardBorder, backgroundColor: palette.card},
-                      ]}>
-                      <View style={[styles.planStepBadge, {backgroundColor: palette.accentSoft}]}> 
-                        <Text style={[styles.planStepBadgeText, {color: palette.accent}]}>{index + 1}</Text>
-                      </View>
-                      <Text style={[styles.planStepText, {color: palette.textPrimary}]}>{action}</Text>
-                    </View>
-                  ))
-                )}
+                {coachPlan.priorityActions.map(action => (
+                  <Text key={action} style={[styles.bulletItem, {color: palette.textPrimary}]}>- {action}</Text>
+                ))}
               </View>
 
               <View style={[styles.outputBox, {borderColor: palette.cardBorder, backgroundColor: palette.backgroundAlt}]}> 
-                <Text style={[styles.outputHeading, {color: palette.textPrimary}]}>Weekly Plan (Execution)</Text>
-                {coachPlan.weeklyPlan.length === 0 ? (
-                  <Text style={[styles.outputText, {color: palette.textMuted}]}>No weekly plan steps generated yet.</Text>
-                ) : (
-                  coachPlan.weeklyPlan.map((step, index) => (
-                    <View
-                      key={`${step}-${index}`}
-                      style={[
-                        styles.planStepCard,
-                        {borderColor: palette.cardBorder, backgroundColor: palette.card},
-                      ]}>
-                      <View style={[styles.planStepBadge, {backgroundColor: palette.accentSoft}]}> 
-                        <Text style={[styles.planStepBadgeText, {color: palette.accent}]}>P{index + 1}</Text>
-                      </View>
-                      <Text style={[styles.planStepText, {color: palette.textPrimary}]}>{step}</Text>
-                    </View>
-                  ))
-                )}
+                <Text style={[styles.outputHeading, {color: palette.textPrimary}]}>Weekly Plan</Text>
+                {coachPlan.weeklyPlan.map(step => (
+                  <Text key={step} style={[styles.bulletItem, {color: palette.textPrimary}]}>- {step}</Text>
+                ))}
               </View>
 
               <View style={[styles.outputBox, {borderColor: palette.cardBorder, backgroundColor: palette.backgroundAlt}]}> 
@@ -334,13 +304,15 @@ const AICoachScreen = ({route}: Props) => {
             {loadingChat ? <ActivityIndicator color="#FFFFFF" /> : <Text style={styles.buttonText}>Send to AI</Text>}
           </Pressable>
 
-          <View style={styles.messagesWrap}>
-            {messages.map(item => (
+          <FlatList
+            data={messages}
+            keyExtractor={item => item.id}
+            scrollEnabled={false}
+            contentContainerStyle={styles.messagesWrap}
+            renderItem={({item}) => (
               <View
-                key={item.id}
                 style={[
                   styles.message,
-                  item.role === 'assistant' ? styles.messageAssistant : styles.messageUser,
                   {
                     borderColor: palette.cardBorder,
                     backgroundColor: item.role === 'assistant' ? palette.accentSoft : palette.backgroundAlt,
@@ -351,8 +323,8 @@ const AICoachScreen = ({route}: Props) => {
                 </Text>
                 <Text style={[styles.messageText, {color: palette.textPrimary}]}>{item.text}</Text>
               </View>
-            ))}
-          </View>
+            )}
+          />
         </GlassCard>
       </ScrollView>
 
@@ -503,33 +475,10 @@ const styles = StyleSheet.create({
     fontFamily: Platform.select(typography.body),
     fontWeight: '600',
   },
-  planStepCard: {
-    marginBottom: 8,
-    borderWidth: 1,
-    borderRadius: 10,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  planStepBadge: {
-    minWidth: 28,
-    height: 24,
-    borderRadius: 12,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 6,
-  },
-  planStepBadgeText: {
-    fontSize: 11,
-    fontFamily: Platform.select(typography.heading),
-    fontWeight: '800',
-  },
-  planStepText: {
-    flex: 1,
+  bulletItem: {
     fontSize: 14,
     fontFamily: Platform.select(typography.body),
+    marginBottom: 4,
     lineHeight: 20,
   },
   timetableRow: {
@@ -565,16 +514,9 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   message: {
-    maxWidth: '88%',
     borderWidth: 1,
     borderRadius: 12,
     padding: 10,
-  },
-  messageAssistant: {
-    alignSelf: 'flex-start',
-  },
-  messageUser: {
-    alignSelf: 'flex-end',
   },
   messageRole: {
     fontSize: 11,

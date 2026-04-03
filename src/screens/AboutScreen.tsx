@@ -4,7 +4,6 @@ import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {useSubjects} from '../context/SubjectsContext';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import GlassCard from '../components/GlassCard';
-import {APP_VERSION} from '../config/appMeta';
 import {darkPalette, lightPalette, typography} from '../theme';
 import {RootStackParamList} from '../navigation/types';
 import BottomNavBar from '../components/BottomNavBar';
@@ -24,21 +23,15 @@ const AboutScreen = ({navigation}: Props) => {
             <Text style={[styles.overline, {color: palette.textSecondary}]}>About</Text>
             <Text style={[styles.pageTitle, {color: palette.textPrimary}]}>Vignan Calculator</Text>
             <Text style={[styles.subtitle, {color: palette.textMuted}]}>A focused tool for internal mark management</Text>
-            <View style={[styles.versionChip, {backgroundColor: palette.accentSoft}]}> 
-              <Text style={[styles.versionChipText, {color: palette.accent}]}>App Version v{APP_VERSION}</Text>
-            </View>
           </View>
         </View>
         <GlassCard palette={palette}>
-          <Text style={[styles.title, {color: palette.textPrimary}]}>Built for Clarity and Focus</Text>
+          <Text style={[styles.title, {color: palette.textPrimary}]}>Built for Clarity</Text>
           <Text style={[styles.body, {color: palette.textSecondary}]}> 
             Vignan Internal Marks Calculator helps you calculate and manage internal marks for all subjects.
           </Text>
           <Text style={[styles.body, {color: palette.textSecondary}]}> 
-            It includes fast calculations, result history, editing support, search, sorting, and AI mentoring.
-          </Text>
-          <Text style={[styles.body, {color: palette.textSecondary}]}> 
-            New in v{APP_VERSION}: system/light/dark themes, better AI chat order, and clearer weekly task plans.
+            It includes fast calculations, result history, editing support, search, sorting, and theme switching.
           </Text>
           <Text style={[styles.body, {color: palette.textSecondary}]}> 
             Formula: Total = (Pre-T1/10)*6 + (T1/20)*8 + (T2/5)*3 + (T3/5)*3 + T4 + average(CLA1..CLA4)
@@ -83,20 +76,6 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontFamily: Platform.select(typography.body),
     fontWeight: '500',
-  },
-  versionChip: {
-    alignSelf: 'flex-start',
-    marginTop: 10,
-    borderRadius: 999,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-  },
-  versionChipText: {
-    fontSize: 11,
-    fontFamily: Platform.select(typography.heading),
-    fontWeight: '700',
-    letterSpacing: 0.4,
-    textTransform: 'uppercase',
   },
   title: {
     fontSize: 22,
