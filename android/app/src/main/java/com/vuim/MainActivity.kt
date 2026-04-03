@@ -19,12 +19,12 @@ class MainActivity : ReactActivity() {
    * which allows you to enable New Architecture with a single boolean flags [fabricEnabled]
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
-      DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
-
-  override fun getLaunchOptions(): Bundle? {
-    val routeName = intent?.getStringExtra("initialRouteName") ?: return null
-    return Bundle().apply {
-      putString("initialRouteName", routeName)
-    }
-  }
+      object : DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled) {
+        override fun getLaunchOptions(): Bundle? {
+          val routeName = intent?.getStringExtra("initialRouteName") ?: return null
+          return Bundle().apply {
+            putString("initialRouteName", routeName)
+          }
+        }
+      }
 }
