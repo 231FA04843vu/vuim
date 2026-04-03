@@ -1,6 +1,7 @@
 import React, {useMemo, useState} from 'react';
 import {Alert, FlatList, Platform, Pressable, StyleSheet, Text, View} from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {RootStackParamList} from '../navigation/types';
 import {useSubjects} from '../context/SubjectsContext';
 import {darkPalette, lightPalette, typography} from '../theme';
@@ -8,18 +9,19 @@ import AnimatedGradientBackground from '../components/AnimatedGradientBackground
 import AnimatedInput from '../components/AnimatedInput';
 import SubjectCard from '../components/SubjectCard';
 import GlassCard from '../components/GlassCard';
+import HamburgerButton from '../components/HamburgerButton';
+import SideDrawerMenu from '../components/SideDrawerMenu';
 import {notify} from '../utils/notify';
-import BottomNavBar from '../components/BottomNavBar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
-const WEAK_SUBJECT_THRESHOLD = 60;
-
 const HomeScreen = ({navigation}: Props) => {
+  const insets = useSafeAreaInsets();
   const {records, deleteRecord, isDarkMode} = useSubjects();
   const palette = isDarkMode ? darkPalette : lightPalette;
 
   const [query, setQuery] = useState('');
   const [sortHighToLow, setSortHighToLow] = useState(true);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const data = useMemo(() => {
     const filtered = records.filter(item =>
@@ -62,7 +64,8 @@ const HomeScreen = ({navigation}: Props) => {
     <View style={styles.container}>
       <AnimatedGradientBackground palette={palette} />
       <View style={styles.inner}>
-        <View style={styles.topRow}>
+        <View style={[styles.topRow, {marginTop: Math.max(8, insets.top + 6)}]}>
+          <HamburgerButton palette={palette} onPress={() => setMenuVisible(true)} />
           <View>
             <Text style={[styles.overline, {color: palette.textSecondary}]}>Overview</Text>
             <Text style={[styles.title, {color: palette.textPrimary}]}>Academic Dashboard</Text>
@@ -85,25 +88,28 @@ const HomeScreen = ({navigation}: Props) => {
           </View>
         </GlassCard>
 
+        <View style={styles.searchHeadRow}>
+          <Text style={[styles.searchHeadTitle, {color: palette.textPrimary}]}>Search Subjects</Text>
+          <Pressable
+            style={[
+              styles.sortChip,
+              {borderColor: palette.cardBorder, backgroundColor: palette.backgroundAlt},
+            ]}
+            android_ripple={{color: 'rgba(255,255,255,0.2)'}}
+            onPress={() => setSortHighToLow(prev => !prev)}>
+            <Text style={[styles.sortText, {color: palette.textPrimary}]}>
+              Sort: {sortHighToLow ? 'Marks High to Low' : 'Name A to Z'}
+            </Text>
+          </Pressable>
+        </View>
+
         <AnimatedInput
-          label="Search Subject"
+          label="Search"
           value={query}
           onChangeText={setQuery}
           palette={palette}
-          placeholder="Type subject name"
+          placeholder="Search subjects..."
         />
-
-        <Pressable
-          style={[
-            styles.sortChip,
-            {borderColor: palette.cardBorder, backgroundColor: palette.backgroundAlt},
-          ]}
-          android_ripple={{color: 'rgba(255,255,255,0.2)'}}
-          onPress={() => setSortHighToLow(prev => !prev)}>
-          <Text style={[styles.sortText, {color: palette.textPrimary}]}> 
-            Sort: {sortHighToLow ? 'Marks High to Low' : 'Name A to Z'}
-          </Text>
-        </Pressable>
 
         <FlatList
           data={data}
@@ -114,7 +120,7 @@ const HomeScreen = ({navigation}: Props) => {
             <SubjectCard
               item={item}
               palette={palette}
-              showCoachTag={item.percentage < WEAK_SUBJECT_THRESHOLD}
+              showCoachTag={false}
               onPress={subjectName => navigation.navigate('SubjectPerformance', {subjectName})}
               onEdit={id => navigation.navigate('SubjectForm', {recordId: id})}
               onDelete={confirmDelete}
@@ -123,13 +129,33 @@ const HomeScreen = ({navigation}: Props) => {
           ListEmptyComponent={
             <View style={[styles.emptyBox, {borderColor: palette.cardBorder, backgroundColor: palette.card}]}> 
               <Text style={[styles.emptyTitle, {color: palette.textPrimary}]}>No subjects yet</Text>
-              <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Use Add tab to create your first subject record.</Text>
+              <Text style={[styles.emptyText, {color: palette.textSecondary}]}>Use the + button to create your first subject record.</Text>
             </View>
           }
         />
       </View>
 
-      <BottomNavBar palette={palette} navigation={navigation} current="Home" />
+      <Pressable
+        style={[
+          styles.fab,
+          {
+            right: 20,
+            bottom: Math.max(20, insets.bottom + 8),
+            backgroundColor: palette.accent,
+            shadowColor: palette.shadow,
+          },
+        ]}
+        onPress={() => navigation.navigate('SubjectForm')}
+        android_ripple={{color: 'rgba(255,255,255,0.25)'}}>
+        <Text style={styles.fabText}>+</Text>
+      </Pressable>
+
+      <SideDrawerMenu
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        palette={palette}
+        navigation={navigation}
+      />
     </View>
   );
 };
@@ -141,13 +167,13 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 0,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 14,
   },
   overline: {
     fontSize: 11,
@@ -164,10 +190,11 @@ const styles = StyleSheet.create({
     lineHeight: 36,
   },
   subtitle: {
-    marginTop: 4,
+    marginTop: 6,
     fontSize: 14,
     fontFamily: Platform.select(typography.body),
     fontWeight: '500',
+    lineHeight: 20,
   },
   heroCard: {
     marginBottom: 14,
@@ -176,12 +203,14 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: Platform.select(typography.heading),
     fontWeight: '700',
+    lineHeight: 22,
   },
   heroSubtitle: {
     marginTop: 4,
     fontSize: 13,
     fontFamily: Platform.select(typography.body),
     marginBottom: 14,
+    lineHeight: 18,
   },
   heroStatsRow: {
     flexDirection: 'row',
@@ -197,6 +226,7 @@ const styles = StyleSheet.create({
     fontSize: 23,
     fontFamily: Platform.select(typography.heading),
     fontWeight: '700',
+    lineHeight: 28,
   },
   heroStatLabel: {
     marginTop: 4,
@@ -206,24 +236,37 @@ const styles = StyleSheet.create({
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
+  searchHeadRow: {
+    marginTop: 2,
+    marginBottom: 4,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 10,
+  },
+  searchHeadTitle: {
+    fontFamily: Platform.select(typography.heading),
+    fontWeight: '700',
+    fontSize: 14,
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+  },
   sortChip: {
-    alignSelf: 'flex-start',
     borderWidth: 1,
     borderRadius: 999,
-    marginBottom: 14,
     overflow: 'hidden',
-    paddingHorizontal: 16,
-    paddingVertical: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
   },
   sortText: {
-    fontSize: 11,
+    fontSize: 10,
     fontFamily: Platform.select(typography.heading),
     fontWeight: '700',
     letterSpacing: 0.6,
     textTransform: 'uppercase',
   },
   listContent: {
-    paddingBottom: 146,
+    paddingBottom: 110,
   },
   emptyBox: {
     marginTop: 18,
@@ -241,6 +284,27 @@ const styles = StyleSheet.create({
     fontSize: 15,
     fontFamily: Platform.select(typography.body),
     lineHeight: 22,
+  },
+  fab: {
+    position: 'absolute',
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowOpacity: 0.24,
+    shadowRadius: 14,
+    shadowOffset: {width: 0, height: 8},
+    elevation: 10,
+    overflow: 'hidden',
+  },
+  fabText: {
+    color: '#FFFFFF',
+    fontSize: 30,
+    lineHeight: 32,
+    marginTop: -1,
+    fontFamily: Platform.select(typography.display),
+    fontWeight: '700',
   },
 });
 

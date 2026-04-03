@@ -4,6 +4,7 @@ import {NavigationContainer} from '@react-navigation/native';
 import {createNativeStackNavigator} from '@react-navigation/native-stack';
 import {useSubjects} from '../context/SubjectsContext';
 import {RootStackParamList} from './types';
+import NotificationsScreen from '../screens/NotificationsScreen';
 import SubjectPerformanceScreen from '../screens/SubjectPerformanceScreen';
 import {
   SplashScreen,
@@ -11,6 +12,8 @@ import {
   SubjectFormScreen,
   SavedRecordsScreen,
   AboutScreen,
+  AboutDetailScreen,
+  MyTasksScreen,
   AICoachScreen,
   UpdatesScreen,
 } from '../screens';
@@ -18,7 +21,12 @@ import {darkPalette, lightPalette} from '../theme';
 
 const Stack = createNativeStackNavigator<RootStackParamList>();
 
-const RootNavigator = () => {
+interface RootNavigatorProps {
+  onReady?: () => void;
+  initialRouteName?: keyof RootStackParamList;
+}
+
+export const RootNavigator = ({ onReady, initialRouteName = 'Splash' }: RootNavigatorProps) => {
   const {loading, isDarkMode} = useSubjects();
   const palette = isDarkMode ? darkPalette : lightPalette;
 
@@ -33,9 +41,13 @@ const RootNavigator = () => {
   return (
     <NavigationContainer>
       <Stack.Navigator
+        initialRouteName={initialRouteName}
         screenOptions={{
           headerShown: false,
-          animation: 'slide_from_right',
+          animation: 'ios_from_right',
+          gestureEnabled: true,
+          fullScreenGestureEnabled: true,
+          presentation: 'card',
         }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
         <Stack.Screen name="Home" component={HomeScreen} />
@@ -43,8 +55,11 @@ const RootNavigator = () => {
         <Stack.Screen name="SavedRecords" component={SavedRecordsScreen} />
         <Stack.Screen name="SubjectPerformance" component={SubjectPerformanceScreen} />
         <Stack.Screen name="AICoach" component={AICoachScreen} />
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
         <Stack.Screen name="Updates" component={UpdatesScreen} />
+        <Stack.Screen name="MyTasks" component={MyTasksScreen} />
         <Stack.Screen name="AboutApp" component={AboutScreen} />
+        <Stack.Screen name="AboutDetail" component={AboutDetailScreen} />
       </Stack.Navigator>
     </NavigationContainer>
   );

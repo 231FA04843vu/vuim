@@ -187,6 +187,7 @@ const styles = StyleSheet.create({
     fontSize: 30,
     fontFamily: Platform.select(typography.display),
     fontWeight: '700',
+    lineHeight: 36,
   },
   card: {
     marginBottom: 12,
@@ -201,6 +202,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontFamily: Platform.select(typography.heading),
     fontWeight: '700',
+    lineHeight: 21,
   },
   weakChip: {
     borderRadius: 999,
@@ -257,7 +259,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'center',
     borderBottomWidth: 1,
-    paddingVertical: 8,
+    paddingVertical: 10,
   },
   cellLabel: {
     fontSize: 13,
@@ -291,7 +293,8 @@ const styles = StyleSheet.create({
   historyRow: {
     borderWidth: 1,
     borderRadius: 12,
-    padding: 10,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     marginTop: 8,
     flexDirection: 'row',
     justifyContent: 'space-between',

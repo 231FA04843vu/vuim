@@ -33,6 +33,7 @@ class UpdateNotifierModule(private val reactContext: ReactApplicationContext) :
             .getLaunchIntentForPackage(reactContext.packageName)
             ?.apply {
               flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+              putExtra("initialRouteName", "Updates")
             }
 
     val pendingIntent =

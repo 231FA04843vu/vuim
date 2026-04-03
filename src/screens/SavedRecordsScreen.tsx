@@ -1,6 +1,7 @@
 import React, {useMemo, useState} from 'react';
 import {Alert, FlatList, Platform, StyleSheet, Text, View} from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {RootStackParamList} from '../navigation/types';
 import {useSubjects} from '../context/SubjectsContext';
 import {darkPalette, lightPalette, typography} from '../theme';
@@ -8,16 +9,19 @@ import AnimatedGradientBackground from '../components/AnimatedGradientBackground
 import AnimatedInput from '../components/AnimatedInput';
 import SubjectCard from '../components/SubjectCard';
 import GlassCard from '../components/GlassCard';
+import HamburgerButton from '../components/HamburgerButton';
+import SideDrawerMenu from '../components/SideDrawerMenu';
 import {notify} from '../utils/notify';
-import BottomNavBar from '../components/BottomNavBar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SavedRecords'>;
 const WEAK_SUBJECT_THRESHOLD = 60;
 
 const SavedRecordsScreen = ({navigation}: Props) => {
+  const insets = useSafeAreaInsets();
   const {records, deleteRecord, isDarkMode} = useSubjects();
   const palette = isDarkMode ? darkPalette : lightPalette;
   const [query, setQuery] = useState('');
+  const [menuVisible, setMenuVisible] = useState(false);
 
   const filtered = useMemo(
     () =>
@@ -45,7 +49,8 @@ const SavedRecordsScreen = ({navigation}: Props) => {
     <View style={styles.container}>
       <AnimatedGradientBackground palette={palette} />
       <View style={styles.inner}>
-        <View style={styles.topRow}>
+        <View style={[styles.topRow, {marginTop: Math.max(8, insets.top + 6)}]}>
+          <HamburgerButton palette={palette} onPress={() => setMenuVisible(true)} />
           <View>
             <Text style={[styles.overline, {color: palette.textSecondary}]}>Archive</Text>
             <Text style={[styles.title, {color: palette.textPrimary}]}>Saved Subjects</Text>
@@ -87,7 +92,12 @@ const SavedRecordsScreen = ({navigation}: Props) => {
           }
         />
       </View>
-      <BottomNavBar palette={palette} navigation={navigation} current="SavedRecords" />
+      <SideDrawerMenu
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        palette={palette}
+        navigation={navigation}
+      />
     </View>
   );
 };
@@ -99,13 +109,13 @@ const styles = StyleSheet.create({
   inner: {
     flex: 1,
     paddingHorizontal: 20,
-    paddingTop: 20,
+    paddingTop: 0,
   },
   topRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'flex-start',
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 14,
   },
   overline: {
     fontSize: 11,
@@ -121,10 +131,11 @@ const styles = StyleSheet.create({
     marginTop: 6,
   },
   subtitle: {
-    marginTop: 4,
+    marginTop: 6,
     fontSize: 14,
     fontFamily: Platform.select(typography.body),
     fontWeight: '500',
+    lineHeight: 20,
   },
   infoCard: {
     marginBottom: 14,
@@ -133,6 +144,7 @@ const styles = StyleSheet.create({
     fontSize: 17,
     fontFamily: Platform.select(typography.heading),
     fontWeight: '700',
+    lineHeight: 22,
   },
   infoText: {
     marginTop: 6,
@@ -141,7 +153,7 @@ const styles = StyleSheet.create({
     lineHeight: 21,
   },
   listContent: {
-    paddingBottom: 146,
+    paddingBottom: 44,
   },
   emptyWrap: {
     marginTop: 20,

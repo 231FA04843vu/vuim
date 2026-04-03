@@ -7,7 +7,7 @@ import com.facebook.react.uimanager.ViewManager
 
 class UpdateNotifierPackage : ReactPackage {
   override fun createNativeModules(reactContext: ReactApplicationContext): List<NativeModule> =
-      listOf(UpdateNotifierModule(reactContext))
+    listOf(UpdateNotifierModule(reactContext), InAppUpdateModule(reactContext))
 
   override fun createViewManagers(reactContext: ReactApplicationContext): List<ViewManager<*, *>> =
       emptyList()

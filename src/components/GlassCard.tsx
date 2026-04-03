@@ -15,6 +15,7 @@ const GlassCard = ({children, palette, style}: Props) => (
       {
         backgroundColor: palette.card,
         borderColor: palette.cardBorder,
+        shadowColor: palette.shadow,
       },
       style,
     ]}>
@@ -25,16 +26,15 @@ const GlassCard = ({children, palette, style}: Props) => (
 const styles = StyleSheet.create({
   card: {
     borderWidth: 1,
-    borderRadius: 18,
+    borderRadius: 22,
     padding: 18,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
+    shadowOpacity: 0.14,
+    shadowRadius: 20,
     shadowOffset: {
       width: 0,
-      height: 6,
+      height: 10,
     },
-    elevation: 4,
+    elevation: 7,
   },
 });
 

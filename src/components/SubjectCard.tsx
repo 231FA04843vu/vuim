@@ -35,12 +35,12 @@ const SubjectCard = ({item, palette, showCoachTag, onPress, onEdit, onDelete}: P
         android_ripple={{color: 'rgba(255, 255, 255, 0.25)'}}>
         <GlassCard palette={palette} style={styles.card}>
           <View style={styles.rowTop}>
-            <View>
+            <View style={styles.leftBlock}>
               <Text style={[styles.title, {color: palette.textPrimary}]} numberOfLines={1}>
                 {item.subjectName}
               </Text>
               <View style={styles.metaRow}>
-                <View style={[styles.moduleChip, {backgroundColor: palette.accentSoft}]}> 
+                <View style={[styles.moduleChip, {backgroundColor: palette.accentSoft}]}>
                   <Text style={[styles.module, {color: palette.accent}]}>{item.module}</Text>
                 </View>
                 {showCoachTag && (
@@ -50,7 +50,7 @@ const SubjectCard = ({item, palette, showCoachTag, onPress, onEdit, onDelete}: P
                 )}
               </View>
             </View>
-            <View>
+            <View style={styles.rightBlock}>
               <Text style={[styles.total, {color: palette.textPrimary}]}>{item.total.toFixed(2)} / 60</Text>
               <Text style={[styles.percent, {color: palette.textSecondary}]}>{item.percentage.toFixed(2)}%</Text>
             </View>
@@ -91,15 +91,23 @@ const styles = StyleSheet.create({
   rowTop: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 14,
     gap: 12,
+  },
+  leftBlock: {
+    flex: 1,
+    minWidth: 0,
+  },
+  rightBlock: {
+    width: 116,
+    alignItems: 'flex-end',
   },
   title: {
     fontSize: 19,
     fontFamily: Platform.select(typography.heading),
     fontWeight: '700',
-    maxWidth: 200,
+    lineHeight: 24,
   },
   moduleChip: {
     alignSelf: 'flex-start',
@@ -112,6 +120,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginTop: 8,
+    flexWrap: 'wrap',
   },
   module: {
     fontSize: 11,
@@ -121,7 +131,6 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   coachChip: {
-    marginTop: 8,
     borderRadius: 999,
     paddingHorizontal: 10,
     paddingVertical: 5,
@@ -138,12 +147,14 @@ const styles = StyleSheet.create({
     fontFamily: Platform.select(typography.heading),
     fontWeight: '700',
     textAlign: 'right',
+    lineHeight: 22,
   },
   percent: {
     marginTop: 4,
     fontSize: 13,
     fontFamily: Platform.select(typography.body),
     textAlign: 'right',
+    lineHeight: 18,
   },
   actions: {
     marginTop: 16,
@@ -152,9 +163,9 @@ const styles = StyleSheet.create({
     gap: 10,
   },
   actionButton: {
-    borderRadius: 999,
+    borderRadius: 14,
     borderWidth: 1,
-    paddingHorizontal: 15,
+    paddingHorizontal: 16,
     paddingVertical: 9,
     overflow: 'hidden',
   },

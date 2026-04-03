@@ -22,6 +22,8 @@ type SubjectsContextType = {
   setThemeMode: (mode: ThemeMode) => Promise<void>;
   toggleTheme: () => Promise<void>;
   findRecordById: (id: string) => SubjectRecord | undefined;
+  clearCache: () => Promise<void>;
+  clearData: () => Promise<void>;
 };
 
 const SubjectsContext = createContext<SubjectsContextType | undefined>(undefined);
@@ -125,6 +127,14 @@ export const SubjectsProvider = ({children}: {children: React.ReactNode}) => {
     [records],
   );
 
+  const clearCache = useCallback(async () => {
+    await resetRecords();
+  }, [resetRecords]);
+
+  const clearData = useCallback(async () => {
+    await resetRecords();
+  }, [resetRecords]);
+
   const value = useMemo(
     () => ({
       loading,
@@ -138,6 +148,8 @@ export const SubjectsProvider = ({children}: {children: React.ReactNode}) => {
       setThemeMode,
       toggleTheme,
       findRecordById,
+      clearCache,
+      clearData,
     }),
     [
       loading,
@@ -151,6 +163,8 @@ export const SubjectsProvider = ({children}: {children: React.ReactNode}) => {
       setThemeMode,
       toggleTheme,
       findRecordById,
+      clearCache,
+      clearData,
     ],
   );
 

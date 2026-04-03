@@ -24,6 +24,19 @@ export type SubjectRecord = {
 
 export type ThemeMode = 'system' | 'light' | 'dark';
 
+export type AppThemeMode = ThemeMode;
+
+export type NotificationCategory = 'updates' | 'coach' | 'ai' | 'system';
+
+export type AppNotification = {
+  id: string;
+  title: string;
+  message: string;
+  category: NotificationCategory;
+  createdAt: string;
+  read: boolean;
+};
+
 export type AppPreferences = {
   themeMode: ThemeMode;
 };
@@ -32,6 +45,12 @@ export type AIMessage = {
   id: string;
   role: 'user' | 'assistant';
   text: string;
+  createdAt: string;
+};
+
+export type AITask = {
+  id: string;
+  title: string;
   createdAt: string;
 };
 

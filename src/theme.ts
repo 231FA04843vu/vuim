@@ -21,47 +21,47 @@ export type Palette = {
 };
 
 export const lightPalette: Palette = {
-  background: '#F3F6FA',
+  background: '#EAF1FA',
   backgroundAlt: '#FFFFFF',
-  backgroundElevated: '#E9F0F7',
-  surface: '#FFFFFF',
-  card: 'rgba(255, 255, 255, 0.96)',
-  cardBorder: 'rgba(100, 116, 139, 0.2)',
+  backgroundElevated: '#DCE7F5',
+  surface: 'rgba(255, 255, 255, 0.92)',
+  card: 'rgba(255, 255, 255, 0.9)',
+  cardBorder: 'rgba(205, 218, 237, 0.9)',
   textPrimary: '#0F172A',
   textSecondary: '#334155',
   textMuted: '#6B7280',
   accent: '#0F766E',
-  accentSoft: 'rgba(15, 118, 110, 0.12)',
+  accentSoft: 'rgba(15, 118, 110, 0.14)',
   fab: '#0F766E',
   success: '#16A34A',
   warning: '#CA8A04',
   danger: '#DC2626',
-  shadow: '#0F172A',
-  gradientA: '#EAF2FF',
-  gradientB: '#EAFBF6',
-  gradientC: '#F4F7FC',
+  shadow: '#1E293B',
+  gradientA: '#DDEBFF',
+  gradientB: '#D9F7EE',
+  gradientC: '#EEF4FF',
 };
 
 export const darkPalette: Palette = {
-  background: '#0B1220',
-  backgroundAlt: '#111B2D',
-  backgroundElevated: '#162235',
-  surface: '#132037',
-  card: 'rgba(19, 32, 55, 0.94)',
-  cardBorder: 'rgba(148, 163, 184, 0.16)',
+  background: '#0A1220',
+  backgroundAlt: '#122036',
+  backgroundElevated: '#162B45',
+  surface: 'rgba(18, 32, 54, 0.72)',
+  card: 'rgba(20, 35, 58, 0.58)',
+  cardBorder: 'rgba(161, 184, 214, 0.28)',
   textPrimary: '#E5ECF6',
   textSecondary: '#B7C3D9',
   textMuted: '#93A3BD',
   accent: '#2DD4BF',
-  accentSoft: 'rgba(45, 212, 191, 0.16)',
+  accentSoft: 'rgba(45, 212, 191, 0.2)',
   fab: '#14B8A6',
   success: '#22C55E',
   warning: '#FACC15',
   danger: '#FB7185',
   shadow: '#000000',
-  gradientA: '#132741',
-  gradientB: '#10323A',
-  gradientC: '#15263D',
+  gradientA: '#19345A',
+  gradientB: '#18404A',
+  gradientC: '#1A2E4B',
 };
 
 export const spacing = {
@@ -74,17 +74,17 @@ export const spacing = {
 };
 
 export const radius = {
-  sm: 10,
-  md: 14,
-  lg: 18,
-  xl: 24,
+  sm: 12,
+  md: 16,
+  lg: 22,
+  xl: 28,
   pill: 999,
 };
 
 export const typography = {
   display: {
     ios: 'AvenirNext-Bold',
-    android: 'serif',
+    android: 'sans-serif-medium',
   },
   heading: {
     ios: 'AvenirNext-DemiBold',

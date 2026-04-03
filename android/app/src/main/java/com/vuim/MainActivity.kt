@@ -1,5 +1,6 @@
 package com.vuim
 
+import android.os.Bundle
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
@@ -19,4 +20,11 @@ class MainActivity : ReactActivity() {
    */
   override fun createReactActivityDelegate(): ReactActivityDelegate =
       DefaultReactActivityDelegate(this, mainComponentName, fabricEnabled)
+
+  override fun getLaunchOptions(): Bundle? {
+    val routeName = intent?.getStringExtra("initialRouteName") ?: return null
+    return Bundle().apply {
+      putString("initialRouteName", routeName)
+    }
+  }
 }

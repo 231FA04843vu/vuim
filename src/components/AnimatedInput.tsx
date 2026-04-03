@@ -23,7 +23,7 @@ const AnimatedInput = ({label, palette, onFocus, onBlur, style, ...rest}: Props)
   const shellStyle = {
     borderColor: focused ? palette.accent : palette.cardBorder,
     shadowColor: focused ? palette.accent : palette.shadow,
-    backgroundColor: palette.backgroundAlt,
+    backgroundColor: palette.surface,
     transform: [{scale}],
   };
 
@@ -81,13 +81,13 @@ const styles = StyleSheet.create({
     textTransform: 'uppercase',
   },
   inputShell: {
-    borderRadius: 12,
+    borderRadius: 16,
     borderWidth: 1,
     paddingHorizontal: 14,
-    shadowOpacity: 0.08,
-    shadowOffset: {width: 0, height: 4},
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOpacity: 0.14,
+    shadowOffset: {width: 0, height: 7},
+    shadowRadius: 14,
+    elevation: 6,
   },
   input: {
     fontSize: 15,

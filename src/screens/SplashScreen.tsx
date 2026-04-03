@@ -43,7 +43,7 @@ const SplashScreen = ({navigation}: Props) => {
       <Animated.View style={[styles.logoWrap, {opacity: fade, transform: [{scale}]}]}>
         <Image source={require('../../assets/app-icon.png')} style={styles.logoImage} resizeMode="contain" />
       </Animated.View>
-      <Text style={[styles.title, {color: palette.textPrimary}]}>Vignan Internal Marks Calculator</Text>
+      <Text style={[styles.title, {color: palette.textPrimary}]}>Academic Marks Companion</Text>
       <Text style={[styles.subtitle, {color: palette.textSecondary}]}>Calm, reliable internal marks tracking</Text>
     </View>
   );

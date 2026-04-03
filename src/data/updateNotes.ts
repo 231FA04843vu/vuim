@@ -35,7 +35,7 @@ export const updateNotes: UpdateNote[] = [
     ],
   },
   {
-    version: '1.3.1',
+    version: '1.3.4',
     date: '2026-04-03',
     title: 'Stability Baseline for 1.3 Releases',
     highlights: [

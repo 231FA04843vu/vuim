@@ -1,6 +1,7 @@
 import React, {useEffect, useMemo, useState} from 'react';
 import {Platform, Pressable, ScrollView, StyleSheet, Text, View} from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
+import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import {Picker} from '@react-native-picker/picker';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
 import AnimatedInput from '../components/AnimatedInput';
@@ -12,7 +13,8 @@ import {darkPalette, lightPalette, typography} from '../theme';
 import {ModuleType, SubjectMarksInput} from '../types';
 import {calculateInternalMarks} from '../utils/calculate';
 import {notify} from '../utils/notify';
-import BottomNavBar from '../components/BottomNavBar';
+import HamburgerButton from '../components/HamburgerButton';
+import SideDrawerMenu from '../components/SideDrawerMenu';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'SubjectForm'>;
 
@@ -34,6 +36,7 @@ const parseNumber = (value: string) => {
 };
 
 const SubjectFormScreen = ({navigation, route}: Props) => {
+  const insets = useSafeAreaInsets();
   const {addRecord, updateRecord, findRecordById, isDarkMode} = useSubjects();
   const palette = isDarkMode ? darkPalette : lightPalette;
 
@@ -43,6 +46,7 @@ const SubjectFormScreen = ({navigation, route}: Props) => {
   const [subjectName, setSubjectName] = useState(record?.subjectName ?? '');
   const [module, setModule] = useState<ModuleType>(record?.module ?? 'Module 1');
   const [marks, setMarks] = useState<SubjectMarksInput>(record?.marks ?? emptyMarks);
+  const [menuVisible, setMenuVisible] = useState(false);
 
   useEffect(() => {
     navigation.setOptions({
@@ -88,8 +92,9 @@ const SubjectFormScreen = ({navigation, route}: Props) => {
   return (
     <View style={styles.container}>
       <AnimatedGradientBackground palette={palette} />
-      <ScrollView contentContainerStyle={styles.content}>
+      <ScrollView contentContainerStyle={[styles.content, {paddingTop: Math.max(18, insets.top + 8)}]}>
         <View style={styles.topRow}>
+          <HamburgerButton palette={palette} onPress={() => setMenuVisible(true)} />
           <View>
             <Text style={[styles.overline, {color: palette.textSecondary}]}>Editor</Text>
             <Text style={[styles.pageTitle, {color: palette.textPrimary}]}>
@@ -203,7 +208,12 @@ const SubjectFormScreen = ({navigation, route}: Props) => {
           </Pressable>
         </GlassCard>
       </ScrollView>
-      <BottomNavBar palette={palette} navigation={navigation} current="SubjectForm" />
+      <SideDrawerMenu
+        visible={menuVisible}
+        onClose={() => setMenuVisible(false)}
+        palette={palette}
+        navigation={navigation}
+      />
     </View>
   );
 };
@@ -214,14 +224,13 @@ const styles = StyleSheet.create({
   },
   content: {
     paddingHorizontal: 20,
-    paddingTop: 20,
-    paddingBottom: 150,
+    paddingBottom: 44,
   },
   topRow: {
     flexDirection: 'row',
-    justifyContent: 'flex-start',
     alignItems: 'flex-start',
-    marginBottom: 16,
+    gap: 12,
+    marginBottom: 14,
   },
   overline: {
     fontSize: 11,
@@ -235,12 +244,14 @@ const styles = StyleSheet.create({
     fontFamily: Platform.select(typography.display),
     fontWeight: '700',
     marginTop: 6,
+    lineHeight: 36,
   },
   subtitle: {
-    marginTop: 4,
+    marginTop: 6,
     fontSize: 14,
     fontFamily: Platform.select(typography.body),
     fontWeight: '500',
+    lineHeight: 20,
   },
   heading: {
     fontSize: 20,

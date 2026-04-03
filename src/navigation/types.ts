@@ -5,6 +5,12 @@ export type RootStackParamList = {
   SavedRecords: undefined;
   SubjectPerformance: {subjectName: string};
   AICoach: {focusSubject?: string} | undefined;
+  Notifications: undefined;
   Updates: undefined;
+  MyTasks: undefined;
   AboutApp: undefined;
+  AboutDetail: {
+    title: string;
+    content: string;
+  };
 };
