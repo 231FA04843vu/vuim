@@ -16,6 +16,12 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Write google-services.json
+        env:
+          GOOGLE_SERVICES_JSON: ${{ secrets.GOOGLE_SERVICES_JSON }}
+        run: |
+          echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:
@@ -49,34 +55,18 @@ jobs:
           files: android/app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true
 
-      - name: Trigger release notification webhook
-        if: ${{ secrets.RELEASE_NOTIFY_WEBHOOK_URL != '' }}
-        env:
-          RELEASE_NOTIFY_WEBHOOK_URL: ${{ secrets.RELEASE_NOTIFY_WEBHOOK_URL }}
-          RELEASE_TAG: ${{ github.ref_name }}
-          RELEASE_VERSION: ${{ github.ref_name }}
-          RELEASE_REPO: ${{ github.repository }}
-          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
-        run: |
-          curl -X POST "$RELEASE_NOTIFY_WEBHOOK_URL" \
-            -H "Content-Type: application/json" \
-            -d "{\"tag\":\"$RELEASE_TAG\",\"version\":\"$RELEASE_VERSION\",\"repository\":\"$RELEASE_REPO\",\"releaseUrl\":\"$RELEASE_URL\"}"
-
       - name: Authenticate to Google Cloud for FCM
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' && secrets.FIREBASE_PROJECT_ID != '' && secrets.FCM_TOPIC != '' }}
         uses: google-github-actions/auth@v2
         with:
           credentials_json: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON }}
 
       - name: Set up gcloud SDK
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' && secrets.FIREBASE_PROJECT_ID != '' && secrets.FCM_TOPIC != '' }}
         uses: google-github-actions/setup-gcloud@v2
 
       - name: Send FCM topic notification
-        if: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON != '' && secrets.FIREBASE_PROJECT_ID != '' && secrets.FCM_TOPIC != '' }}
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
-          FCM_TOPIC: ${{ secrets.FCM_TOPIC }}
+          FCM_TOPIC: vuim_updates
           RELEASE_TAG: ${{ github.ref_name }}
           RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
         run: |
