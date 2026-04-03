@@ -80,7 +80,7 @@ const MyTasksScreen = ({navigation}: Props) => {
       <AnimatedGradientBackground palette={palette} />
       <ScrollView contentContainerStyle={[styles.content, {paddingTop: Math.max(18, insets.top + 8)}]}>
         <View style={styles.topRow}>
-          <HamburgerButton palette={palette} onPress={() => setMenuVisible(true)} />
+          <HamburgerButton palette={palette} isDarkMode={isDarkMode} onPress={() => setMenuVisible(true)} />
           <View>
             <Text style={[styles.overline, {color: palette.textSecondary}]}>Tasks</Text>
             <Text style={[styles.title, {color: palette.textPrimary}]}>My Tasks</Text>

@@ -50,7 +50,7 @@ const SavedRecordsScreen = ({navigation}: Props) => {
       <AnimatedGradientBackground palette={palette} />
       <View style={styles.inner}>
         <View style={[styles.topRow, {marginTop: Math.max(8, insets.top + 6)}]}>
-          <HamburgerButton palette={palette} onPress={() => setMenuVisible(true)} />
+          <HamburgerButton palette={palette} isDarkMode={isDarkMode} onPress={() => setMenuVisible(true)} />
           <View>
             <Text style={[styles.overline, {color: palette.textSecondary}]}>Archive</Text>
             <Text style={[styles.title, {color: palette.textPrimary}]}>Saved Subjects</Text>

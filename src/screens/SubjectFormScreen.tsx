@@ -30,9 +30,39 @@ const emptyMarks: SubjectMarksInput = {
   cla4: 0,
 };
 
-const parseNumber = (value: string) => {
-  const n = Number(value);
-  return Number.isNaN(n) ? 0 : n;
+const MARK_LIMITS: Record<keyof SubjectMarksInput, number> = {
+  pret1: 10,
+  t1: 20,
+  t2: 5,
+  t3: 5,
+  t4: 20,
+  cla1: 20,
+  cla2: 20,
+  cla3: 20,
+  cla4: 20,
+};
+
+const parseClampedMark = (value: string, max: number) => {
+  const digitsOnly = value.replace(/[^\d]/g, '');
+  if (!digitsOnly) {
+    return 0;
+  }
+
+  const parsed = Number(digitsOnly);
+  if (Number.isNaN(parsed)) {
+    return 0;
+  }
+
+  return Math.min(parsed, max);
+};
+
+const normalizeSubjectName = (value: string) => {
+  const lettersOnly = value.replace(/[^A-Za-z\s]/g, '').replace(/\s+/g, ' ').trimStart();
+  return lettersOnly
+    .split(' ')
+    .filter(Boolean)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
+    .join(' ');
 };
 
 const SubjectFormScreen = ({navigation, route}: Props) => {
@@ -57,20 +87,23 @@ const SubjectFormScreen = ({navigation, route}: Props) => {
   const result = useMemo(() => calculateInternalMarks(marks), [marks]);
 
   const setField = (key: keyof SubjectMarksInput, value: string) => {
+    const maxAllowed = MARK_LIMITS[key];
     setMarks(prev => ({
       ...prev,
-      [key]: parseNumber(value),
+      [key]: parseClampedMark(value, maxAllowed),
     }));
   };
 
   const save = async () => {
-    if (!subjectName.trim()) {
+    const cleanSubjectName = normalizeSubjectName(subjectName).trim();
+
+    if (!cleanSubjectName) {
       notify('Enter subject name');
       return;
     }
 
     const payload = {
-      subjectName: subjectName.trim(),
+      subjectName: cleanSubjectName,
       module,
       marks,
     };
@@ -94,7 +127,7 @@ const SubjectFormScreen = ({navigation, route}: Props) => {
       <AnimatedGradientBackground palette={palette} />
       <ScrollView contentContainerStyle={[styles.content, {paddingTop: Math.max(18, insets.top + 8)}]}>
         <View style={styles.topRow}>
-          <HamburgerButton palette={palette} onPress={() => setMenuVisible(true)} />
+          <HamburgerButton palette={palette} isDarkMode={isDarkMode} onPress={() => setMenuVisible(true)} />
           <View>
             <Text style={[styles.overline, {color: palette.textSecondary}]}>Editor</Text>
             <Text style={[styles.pageTitle, {color: palette.textPrimary}]}>
@@ -109,7 +142,7 @@ const SubjectFormScreen = ({navigation, route}: Props) => {
           <AnimatedInput
             label="Subject Name"
             value={subjectName}
-            onChangeText={setSubjectName}
+            onChangeText={value => setSubjectName(normalizeSubjectName(value))}
             palette={palette}
             placeholder="E.g. Digital Logic Design"
           />

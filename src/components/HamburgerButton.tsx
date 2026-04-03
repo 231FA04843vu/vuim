@@ -4,26 +4,33 @@ import {Palette} from '../theme';
 
 type Props = {
   palette: Palette;
+  isDarkMode: boolean;
   onPress: () => void;
 };
 
-const HamburgerButton = ({palette, onPress}: Props) => (
-  <Pressable
-    onPress={onPress}
-    style={[
-      styles.button,
-      {
-        backgroundColor: palette.surface,
-        borderColor: palette.cardBorder,
-        shadowColor: palette.shadow,
-      },
-    ]}
-    android_ripple={{color: 'rgba(255,255,255,0.2)'}}>
-    <View style={[styles.line, {backgroundColor: palette.textPrimary}]} />
-    <View style={[styles.line, {backgroundColor: palette.textPrimary}]} />
-    <View style={[styles.line, {backgroundColor: palette.textPrimary}]} />
-  </Pressable>
-);
+const HamburgerButton = ({palette, isDarkMode, onPress}: Props) => {
+  const backgroundColor = isDarkMode ? palette.surface : '#FFFFFF';
+  const lineColor = isDarkMode ? palette.textPrimary : '#334155';
+  const rippleColor = isDarkMode ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.08)';
+
+  return (
+    <Pressable
+      onPress={onPress}
+      style={[
+        styles.button,
+        {
+          backgroundColor,
+          borderColor: palette.cardBorder,
+          shadowColor: palette.shadow,
+        },
+      ]}
+      android_ripple={{color: rippleColor}}>
+      <View style={[styles.line, {backgroundColor: lineColor}]} />
+      <View style={[styles.line, {backgroundColor: lineColor}]} />
+      <View style={[styles.line, {backgroundColor: lineColor}]} />
+    </Pressable>
+  );
+};
 
 const styles = StyleSheet.create({
   button: {
