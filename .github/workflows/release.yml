@@ -22,6 +22,13 @@ jobs:
         run: |
           echo "$GOOGLE_SERVICES_JSON" > android/app/google-services.json
 
+      - name: Write OpenRouter runtime key file
+        env:
+          OPENROUTER_API_KEY: ${{ secrets['OPENROUTER_API_KEY'] }}
+        run: |
+          echo "// Generated in CI. Do not commit secrets in source." > src/config/ai.runtime.ts
+          echo "export const RUNTIME_OPENROUTER_API_KEY = '${OPENROUTER_API_KEY}';" >> src/config/ai.runtime.ts
+
       - name: Set up Node.js
         uses: actions/setup-node@v4
         with:

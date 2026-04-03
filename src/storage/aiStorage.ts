@@ -1,5 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import {DEFAULT_OPENROUTER_API_KEY} from '../config/ai';
+import {RUNTIME_OPENROUTER_API_KEY} from '../config/ai.runtime';
 import {AIMessage, AITask, CoachTimeBlock} from '../types';
 
 const OPENROUTER_API_KEY = '@vuim/openrouter_api_key';
@@ -24,9 +24,9 @@ export const loadAiApiKey = async (): Promise<string> => {
       return legacyGeminiKey.trim();
     }
 
-    return DEFAULT_OPENROUTER_API_KEY;
+    return RUNTIME_OPENROUTER_API_KEY;
   } catch {
-    return DEFAULT_OPENROUTER_API_KEY;
+    return RUNTIME_OPENROUTER_API_KEY;
   }
 };
 

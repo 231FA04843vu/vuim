@@ -1,5 +1,14 @@
 This is a new [**React Native**](https://reactnative.dev) project, bootstrapped using [`@react-native-community/cli`](https://github.com/react-native-community/cli).
 
+## OpenRouter Key Security
+
+- Do not commit OpenRouter API keys in source files.
+- This repo uses `src/config/ai.runtime.ts` as a runtime key placeholder, committed with an empty value.
+- In GitHub Actions release builds, the workflow overwrites this file from repository secret `OPENROUTER_API_KEY`.
+- Rotate exposed keys immediately from OpenRouter dashboard and update the GitHub secret.
+
+Important: because this is a client app, any API key bundled into a release can still be extracted from the app package. For strict security, route AI requests through your own backend and keep provider keys server-side only.
+
 # Getting Started
 
 > **Note**: Make sure you have completed the [Set Up Your Environment](https://reactnative.dev/docs/set-up-your-environment) guide before proceeding.
