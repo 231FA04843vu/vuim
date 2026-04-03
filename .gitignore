@@ -27,6 +27,7 @@ DerivedData
 build/
 .idea
 .gradle
+android/app/google-services.json
 local.properties
 *.iml
 *.hprof
