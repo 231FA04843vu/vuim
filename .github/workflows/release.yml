@@ -48,3 +48,16 @@ jobs:
         with:
           files: android/app/build/outputs/apk/release/app-release.apk
           generate_release_notes: true
+
+      - name: Trigger release notification webhook
+        if: ${{ secrets.RELEASE_NOTIFY_WEBHOOK_URL != '' }}
+        env:
+          RELEASE_NOTIFY_WEBHOOK_URL: ${{ secrets.RELEASE_NOTIFY_WEBHOOK_URL }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          RELEASE_VERSION: ${{ github.ref_name }}
+          RELEASE_REPO: ${{ github.repository }}
+          RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+        run: |
+          curl -X POST "$RELEASE_NOTIFY_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "{\"tag\":\"$RELEASE_TAG\",\"version\":\"$RELEASE_VERSION\",\"repository\":\"$RELEASE_REPO\",\"releaseUrl\":\"$RELEASE_URL\"}"

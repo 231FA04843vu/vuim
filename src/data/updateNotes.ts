@@ -2,6 +2,17 @@ import {UpdateNote} from '../types';
 
 export const updateNotes: UpdateNote[] = [
   {
+    version: '1.3.3',
+    date: '2026-04-03',
+    title: 'Automatic Update Alerts',
+    highlights: [
+      'One-time in-app update note appears automatically after upgrading',
+      'Android system notification now prompts users about new updates',
+      'Release workflow can notify a push backend automatically on each tag release',
+      'Improved update flow reliability from version 1.3.2 to 1.3.3',
+    ],
+  },
+  {
     version: '1.3.2',
     date: '2026-04-03',
     title: 'Smart Theme + Better AI Coach Flow',

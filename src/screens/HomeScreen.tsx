@@ -1,4 +1,4 @@
-import React, {useMemo, useState} from 'react';
+import React, {useEffect, useMemo, useState} from 'react';
 import {Alert, FlatList, Platform, Pressable, StyleSheet, Text, View} from 'react-native';
 import {NativeStackScreenProps} from '@react-navigation/native-stack';
 import {RootStackParamList} from '../navigation/types';
@@ -11,7 +11,9 @@ import GlassCard from '../components/GlassCard';
 import SideDrawerMenu from '../components/SideDrawerMenu';
 import {APP_VERSION} from '../config/appMeta';
 import {updateNotes} from '../data/updateNotes';
+import {loadLastSeenAppVersion, saveLastSeenAppVersion} from '../storage/updateStorage';
 import {notify} from '../utils/notify';
+import {pushSystemUpdateNotification} from '../utils/updateNotifier';
 import BottomNavBar from '../components/BottomNavBar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
@@ -69,6 +71,43 @@ const HomeScreen = ({navigation}: Props) => {
 
   const latestRelease = updateNotes[0]?.version;
   const hasUpdate = !!latestRelease && compareSemver(latestRelease, APP_VERSION) > 0;
+
+  useEffect(() => {
+    let isActive = true;
+
+    const showVersionNote = async () => {
+      const lastSeenVersion = await loadLastSeenAppVersion();
+      if (!isActive || lastSeenVersion === APP_VERSION) {
+        return;
+      }
+
+      await saveLastSeenAppVersion(APP_VERSION);
+
+      const note = updateNotes.find(item => item.version === APP_VERSION) ?? updateNotes[0];
+      if (!note) {
+        return;
+      }
+
+      await pushSystemUpdateNotification(`VUIM updated to v${APP_VERSION}`, note.highlights);
+
+      const highlights = note.highlights.slice(0, 4).map((item, index) => `${index + 1}. ${item}`).join('\n');
+      const message = `${note.title}\n\n${highlights}`;
+
+      Alert.alert(`What is new in v${APP_VERSION}`, message, [
+        {text: 'Later', style: 'cancel'},
+        {
+          text: 'View Updates',
+          onPress: () => navigation.navigate('Updates'),
+        },
+      ]);
+    };
+
+    showVersionNote();
+
+    return () => {
+      isActive = false;
+    };
+  }, [navigation]);
 
   const confirmDelete = (id: string) => {
     Alert.alert('Delete Subject', 'Do you want to remove this record?', [
