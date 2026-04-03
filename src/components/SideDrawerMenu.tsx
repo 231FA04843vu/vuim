@@ -16,6 +16,7 @@ import {NavigationProp} from '@react-navigation/native';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import {useNotifications} from '../context/NotificationsContext';
 import {useSubjects} from '../context/SubjectsContext';
+import {APP_VERSION} from '../config/appMeta';
 import {Palette, typography} from '../theme';
 import {RootStackParamList} from '../navigation/types';
 import {notify} from '../utils/notify';
@@ -37,7 +38,7 @@ const SideDrawerMenu = ({visible, onClose, palette, navigation}: Props) => {
   const {themeMode, setThemeMode, clearCache, clearData, toggleTheme} = useSubjects();
   const translateX = useRef(new Animated.Value(-320)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const [releaseVersion, setReleaseVersion] = React.useState('v1.3.6');
+  const [releaseVersion, setReleaseVersion] = React.useState('v1.3.7');
 
   useEffect(() => {
     Animated.parallel([
@@ -86,6 +87,37 @@ const SideDrawerMenu = ({visible, onClose, palette, navigation}: Props) => {
       onClose();
     } catch {
       notify('Unable to open repository link');
+    }
+  };
+
+  const reportIssue = async () => {
+    const title = encodeURIComponent(`[Bug] `);
+    const body = encodeURIComponent(
+      [
+        '## What happened',
+        '',
+        'Describe the issue clearly.',
+        '',
+        '## Steps to reproduce',
+        '1. ',
+        '2. ',
+        '3. ',
+        '',
+        '## Expected behavior',
+        '',
+        '## Device info',
+        `- App version: ${APP_VERSION}`,
+        `- Platform: ${Platform.OS}`,
+      ].join('\n'),
+    );
+
+    const issueUrl = `https://github.com/231FA04843vu/vuim/issues/new?title=${title}&body=${body}&labels=bug`;
+
+    try {
+      await Linking.openURL(issueUrl);
+      onClose();
+    } catch {
+      notify('Unable to open issue form');
     }
   };
 
@@ -231,6 +263,14 @@ const SideDrawerMenu = ({visible, onClose, palette, navigation}: Props) => {
                     <Ionicons name="logo-github" size={16} color={palette.accent} />
                   </View>
                   <Text style={[styles.itemText, {color: palette.textPrimary}]}>GitHub Repo</Text>
+                </View>
+              </Pressable>
+              <Pressable style={[styles.item, {borderColor: palette.cardBorder}]} onPress={reportIssue}>
+                <View style={styles.itemRow}>
+                  <View style={[styles.itemIconWrap, {backgroundColor: palette.accentSoft}]}> 
+                    <Ionicons name="bug-outline" size={17} color={palette.accent} />
+                  </View>
+                  <Text style={[styles.itemText, {color: palette.textPrimary}]}>Report an Issue</Text>
                 </View>
               </Pressable>
               <Pressable style={[styles.item, {borderColor: palette.cardBorder}]} onPress={() => goTo('AboutApp')}>

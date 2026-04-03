@@ -2,14 +2,14 @@ import {UpdateNote} from '../types';
 
 export const updateNotes: UpdateNote[] = [
   {
-    version: '1.3.6',
+    version: '1.3.7',
     date: '2026-04-03',
     title: 'Realtime Release Notification Ready',
     highlights: [
       'FCM topic subscription flow added for release notifications',
       'Release workflow now sends FCM push on tagged releases',
       'Secure handling of Firebase config through GitHub secrets',
-      'Update-note flow refined from version 1.3.5 to 1.3.6',
+      'Update-note flow refined from version 1.3.6 to 1.3.7',
     ],
   },
   {
@@ -35,7 +35,7 @@ export const updateNotes: UpdateNote[] = [
     ],
   },
   {
-    version: '1.3.6',
+    version: '1.3.7',
     date: '2026-04-03',
     title: 'Stability Baseline for 1.3 Releases',
     highlights: [

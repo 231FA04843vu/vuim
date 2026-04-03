@@ -63,15 +63,50 @@ jobs:
       - name: Set up gcloud SDK
         uses: google-github-actions/setup-gcloud@v2
 
+      - name: Resolve update hosting values
+        id: update_host
+        env:
+          FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
+        run: |
+          BUCKET="${FIREBASE_PROJECT_ID}.firebasestorage.app"
+          APK_URL="https://storage.googleapis.com/${BUCKET}/vuim/latest/app-release.apk"
+          MANIFEST_URL="https://storage.googleapis.com/${BUCKET}/vuim/latest/update.json"
+          echo "bucket=${BUCKET}" >> "$GITHUB_OUTPUT"
+          echo "apk_url=${APK_URL}" >> "$GITHUB_OUTPUT"
+          echo "manifest_url=${MANIFEST_URL}" >> "$GITHUB_OUTPUT"
+
+      - name: Publish update manifest and APK to Firebase Storage
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+          BUCKET: ${{ steps.update_host.outputs.bucket }}
+          APK_URL: ${{ steps.update_host.outputs.apk_url }}
+          MANIFEST_URL: ${{ steps.update_host.outputs.manifest_url }}
+        run: |
+          mkdir -p build/update-manifest
+          cat > build/update-manifest/update.json <<EOF
+          {
+            "version": "${RELEASE_TAG}",
+            "tag": "${RELEASE_TAG}",
+            "apkUrl": "${APK_URL}",
+            "publishedAt": "$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+          }
+          EOF
+
+          gsutil cp android/app/build/outputs/apk/release/app-release.apk "gs://${BUCKET}/vuim/latest/app-release.apk"
+          gsutil cp build/update-manifest/update.json "gs://${BUCKET}/vuim/latest/update.json"
+          gsutil iam ch allUsers:objectViewer "gs://${BUCKET}" || true
+
       - name: Send FCM topic notification
         env:
           FIREBASE_PROJECT_ID: ${{ secrets.FIREBASE_PROJECT_ID }}
           FCM_TOPIC: vuim_updates
           RELEASE_TAG: ${{ github.ref_name }}
           RELEASE_URL: ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ github.ref_name }}
+          PUBLIC_APK_URL: ${{ steps.update_host.outputs.apk_url }}
+          PUBLIC_MANIFEST_URL: ${{ steps.update_host.outputs.manifest_url }}
         run: |
           ACCESS_TOKEN=$(gcloud auth print-access-token)
           curl -X POST "https://fcm.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/messages:send" \
             -H "Authorization: Bearer ${ACCESS_TOKEN}" \
             -H "Content-Type: application/json; UTF-8" \
-            -d "{\"message\":{\"topic\":\"${FCM_TOPIC}\",\"notification\":{\"title\":\"VUIM Update Available\",\"body\":\"New version ${RELEASE_TAG} is now live. Tap to update.\"},\"android\":{\"priority\":\"HIGH\"},\"data\":{\"releaseTag\":\"${RELEASE_TAG}\",\"releaseUrl\":\"${RELEASE_URL}\"}}}"
+            -d "{\"message\":{\"topic\":\"${FCM_TOPIC}\",\"notification\":{\"title\":\"VUIM Update Available\",\"body\":\"New version ${RELEASE_TAG} is now live. Tap to update.\"},\"android\":{\"priority\":\"HIGH\"},\"data\":{\"releaseTag\":\"${RELEASE_TAG}\",\"releaseUrl\":\"${RELEASE_URL}\",\"apkUrl\":\"${PUBLIC_APK_URL}\",\"manifestUrl\":\"${PUBLIC_MANIFEST_URL}\"}}}"

@@ -9,19 +9,22 @@ type Props = {
 };
 
 const HamburgerButton = ({palette, isDarkMode, onPress}: Props) => {
-  const backgroundColor = isDarkMode ? palette.surface : '#FFFFFF';
-  const lineColor = isDarkMode ? palette.textPrimary : '#334155';
+  const backgroundColor = isDarkMode ? '#122036' : '#FFFFFF';
+  const lineColor = isDarkMode ? '#E5ECF6' : '#0F172A';
+  const borderColor = isDarkMode ? 'rgba(161, 184, 214, 0.28)' : 'rgba(205, 218, 237, 0.9)';
+  const shadowColor = isDarkMode ? '#000000' : '#1E293B';
   const rippleColor = isDarkMode ? 'rgba(255,255,255,0.18)' : 'rgba(15,23,42,0.08)';
 
   return (
     <Pressable
+      key={isDarkMode ? 'hamburger-dark' : 'hamburger-light'}
       onPress={onPress}
       style={[
         styles.button,
         {
           backgroundColor,
-          borderColor: palette.cardBorder,
-          shadowColor: palette.shadow,
+          borderColor,
+          shadowColor,
         },
       ]}
       android_ripple={{color: rippleColor}}>

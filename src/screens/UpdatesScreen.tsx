@@ -26,6 +26,35 @@ type Props = NativeStackScreenProps<RootStackParamList, 'Updates'>;
 
 const APK_CLEANUP_MARKER_KEY = '@vuim/pending_apk_cleanup';
 
+type ReleaseState = {
+  exists: boolean;
+  available: boolean;
+  latestVersion: string;
+  downloadUrl: string;
+  source: 'github' | 'none';
+};
+
+const normalizeVersion = (value: string) => value.trim().replace(/^v/i, '');
+
+const compareVersions = (left: string, right: string): number => {
+  const leftParts = normalizeVersion(left).split('.').map(part => Number.parseInt(part, 10) || 0);
+  const rightParts = normalizeVersion(right).split('.').map(part => Number.parseInt(part, 10) || 0);
+  const maxLength = Math.max(leftParts.length, rightParts.length);
+
+  for (let index = 0; index < maxLength; index += 1) {
+    const leftValue = leftParts[index] ?? 0;
+    const rightValue = rightParts[index] ?? 0;
+    if (leftValue > rightValue) {
+      return 1;
+    }
+    if (leftValue < rightValue) {
+      return -1;
+    }
+  }
+
+  return 0;
+};
+
 const UpdatesScreen = ({navigation}: Props) => {
   const insets = useSafeAreaInsets();
   const {isDarkMode} = useSubjects();
@@ -46,6 +75,12 @@ const UpdatesScreen = ({navigation}: Props) => {
   );
 
   const pollTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
+  const latestVsCurrent = compareVersions(latestReleaseVersion, APP_VERSION);
+  const isCurrentBuildAhead = latestVsCurrent < 0;
+  const latestNotes = React.useMemo(
+    () => updateNotes.filter(note => note.version === latestReleaseVersion.replace(/^v/i, '')),
+    [latestReleaseVersion],
+  );
 
   const clearPoll = React.useCallback(() => {
     if (pollTimerRef.current) {
@@ -80,7 +115,7 @@ const UpdatesScreen = ({navigation}: Props) => {
     }
   }, []);
 
-  const refreshReleaseState = React.useCallback(async () => {
+  const refreshReleaseState = React.useCallback(async (): Promise<ReleaseState> => {
     try {
       const releaseResponse = await fetch('https://api.github.com/repos/231FA04843vu/vuim/releases/latest');
 
@@ -113,13 +148,25 @@ const UpdatesScreen = ({navigation}: Props) => {
         }
       }
 
-      const available = fetchedTag !== APP_VERSION;
+      const available = compareVersions(fetchedTag, APP_VERSION) > 0;
       setIsUpdateAvailable(available);
       setHasCheckedForUpdates(true);
-      return {exists: true, available, latestVersion: fetchedTag, downloadUrl: fetchedDownloadUrl};
+      return {
+        exists: true,
+        available,
+        latestVersion: fetchedTag,
+        downloadUrl: fetchedDownloadUrl,
+        source: 'github',
+      };
     } catch {
       setIsUpdateAvailable(false);
-      return {exists: false, available: false, latestVersion: APP_VERSION, downloadUrl: latestDownloadUrl};
+      return {
+        exists: false,
+        available: false,
+        latestVersion: APP_VERSION,
+        downloadUrl: latestDownloadUrl,
+        source: 'none',
+      };
     }
   }, [latestDownloadUrl]);
 
@@ -154,20 +201,29 @@ const UpdatesScreen = ({navigation}: Props) => {
     setIsChecking(false);
 
     if (!result.exists) {
-      Alert.alert('No Updates Yet', 'You are already on the latest available version.');
+      Alert.alert(
+        'Update Service Unreachable',
+        'Could not reach the update server. Check internet or try again in a minute.',
+      );
       await addNotification({
-        title: 'No New Update',
-        message: 'Checked for update. You are already on the latest available version.',
+        title: 'Update Check Failed',
+        message: 'Could not reach update server. Please retry.',
         category: 'updates',
       });
       return;
     }
 
     if (!result.available) {
-      Alert.alert('No Updates Yet', 'You are already on the latest available version.');
+      const relation = compareVersions(result.latestVersion, APP_VERSION);
+      const infoMessage =
+        relation < 0
+          ? `Installed version (${APP_VERSION}) is newer than GitHub latest (${normalizeVersion(result.latestVersion)}).`
+          : 'You are already on the latest available version.';
+
+      Alert.alert('No Updates Yet', infoMessage);
       await addNotification({
         title: 'No New Update',
-        message: 'Checked for update. You are already on the latest available version.',
+        message: infoMessage,
         category: 'updates',
       });
       return;
@@ -190,8 +246,8 @@ const UpdatesScreen = ({navigation}: Props) => {
     const result = await refreshReleaseState();
     if (!result.exists) {
       Alert.alert(
-        'Update Not Available',
-        'The latest version is not ready yet. Please check back soon or visit our GitHub releases page.',
+        'Update Service Unreachable',
+        'The update server is currently unreachable. Please try again shortly.',
       );
       setIsDownloading(false);
       return;
@@ -307,12 +363,16 @@ const UpdatesScreen = ({navigation}: Props) => {
 
         {(isChecking || isDownloading) && (
           <View style={styles.animationContainer}>
+            <View style={[styles.animationFrame, {backgroundColor: palette.surface, borderColor: palette.cardBorder}]}> 
             <LottieView
               source={require('../../assets/gears-animation.json')}
               autoPlay
               loop
+              resizeMode="contain"
+              renderMode="HARDWARE"
               style={styles.gearAnimation}
             />
+            </View>
             <Text style={[styles.downloadingText, {color: palette.textPrimary}]}>
               {isChecking ? 'Checking for updates...' : downloadLabel}
             </Text>
@@ -336,17 +396,23 @@ const UpdatesScreen = ({navigation}: Props) => {
               ? 'Downloading...'
               : hasCheckedForUpdates && isUpdateAvailable
               ? 'Update Now'
+              : hasCheckedForUpdates
+              ? `Already on Latest (v${normalizeVersion(APP_VERSION)})`
               : 'Check for Updates'}
           </Text>
         </Pressable>
 
-        {hasCheckedForUpdates && isUpdateAvailable && (
+        {hasCheckedForUpdates && isCurrentBuildAhead && (
+          <Text style={[styles.statusHint, {color: palette.textSecondary}]}>GitHub latest is v{normalizeVersion(latestReleaseVersion)}. This app build is newer.</Text>
+        )}
+
+        {hasCheckedForUpdates && isUpdateAvailable && latestNotes.length > 0 && (
           <Text style={[styles.featureTitle, {color: palette.textPrimary}]}>What's New</Text>
         )}
 
         {hasCheckedForUpdates &&
           isUpdateAvailable &&
-          updateNotes.filter(note => note.version === latestReleaseVersion.replace(/^v/i, '')).map(note => (
+          latestNotes.map(note => (
           <GlassCard key={note.version} palette={palette} style={styles.card}>
             <Text style={[styles.version, {color: palette.accent}]}>v{note.version}</Text>
             <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>{note.title}</Text>
@@ -358,6 +424,15 @@ const UpdatesScreen = ({navigation}: Props) => {
             ))}
           </GlassCard>
         ))}
+
+        {hasCheckedForUpdates && isUpdateAvailable && latestNotes.length === 0 && (
+          <GlassCard palette={palette} style={styles.card}>
+            <Text style={[styles.version, {color: palette.accent}]}>{latestReleaseVersion}</Text>
+            <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>What&apos;s New</Text>
+            <Text style={[styles.highlight, {color: palette.textPrimary}]}>Release notes for this version are not yet available in-app.</Text>
+            <Text style={[styles.highlight, {color: palette.textPrimary}]}>You can still continue installing this update.</Text>
+          </GlassCard>
+        )}
       </ScrollView>
 
       <SideDrawerMenu
@@ -429,11 +504,19 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 20,
-    paddingVertical: 20,
+    paddingVertical: 12,
+  },
+  animationFrame: {
+    width: 210,
+    height: 210,
+    borderRadius: 105,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   gearAnimation: {
-    width: 120,
-    height: 120,
+    width: 180,
+    height: 180,
   },
   downloadingText: {
     fontSize: 14,
@@ -462,6 +545,13 @@ const styles = StyleSheet.create({
     fontFamily: Platform.select(typography.heading),
     fontWeight: '700',
     letterSpacing: 0.6,
+  },
+  statusHint: {
+    marginTop: -8,
+    marginBottom: 14,
+    fontSize: 12,
+    fontFamily: Platform.select(typography.body),
+    lineHeight: 18,
   },
   featureTitle: {
     fontSize: 16,
