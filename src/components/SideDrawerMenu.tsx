@@ -4,7 +4,6 @@ import {
   Animated,
   Pressable,
   StyleSheet,
-  Switch,
   Text,
   TouchableWithoutFeedback,
   View,
@@ -14,6 +13,7 @@ import {useSubjects} from '../context/SubjectsContext';
 import {Palette} from '../theme';
 import {RootStackParamList} from '../navigation/types';
 import {notify} from '../utils/notify';
+import {ThemeMode} from '../types';
 
 type Props = {
   visible: boolean;
@@ -23,7 +23,7 @@ type Props = {
 };
 
 const SideDrawerMenu = ({visible, onClose, palette, navigation}: Props) => {
-  const {isDarkMode, toggleTheme, resetRecords} = useSubjects();
+  const {themeMode, setThemeMode, resetRecords} = useSubjects();
   const translateX = useRef(new Animated.Value(-320)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
 
@@ -62,6 +62,12 @@ const SideDrawerMenu = ({visible, onClose, palette, navigation}: Props) => {
     ]);
   };
 
+  const themeOptions: Array<{mode: ThemeMode; label: string}> = [
+    {mode: 'system', label: 'System'},
+    {mode: 'light', label: 'Light'},
+    {mode: 'dark', label: 'Dark'},
+  ];
+
   return (
     <View style={styles.root} pointerEvents={visible ? 'auto' : 'none'}>
       <TouchableWithoutFeedback onPress={onClose}>
@@ -93,9 +99,34 @@ const SideDrawerMenu = ({visible, onClose, palette, navigation}: Props) => {
           <Text style={[styles.itemText, {color: palette.textPrimary}]}>About App</Text>
         </Pressable>
 
-        <View style={styles.themeRow}>
-          <Text style={[styles.itemText, {color: palette.textPrimary}]}>Dark Mode</Text>
-          <Switch value={isDarkMode} onValueChange={toggleTheme} />
+        <View style={styles.settingsBlock}>
+          <Text style={[styles.sectionLabel, {color: palette.textSecondary}]}>Settings</Text>
+          <Text style={[styles.itemText, {color: palette.textPrimary}]}>Theme</Text>
+          <View style={styles.themeOptionsRow}>
+            {themeOptions.map(option => {
+              const selected = themeMode === option.mode;
+              return (
+                <Pressable
+                  key={option.mode}
+                  style={[
+                    styles.themeOption,
+                    {
+                      borderColor: selected ? palette.accent : palette.cardBorder,
+                      backgroundColor: selected ? palette.accentSoft : palette.backgroundAlt,
+                    },
+                  ]}
+                  onPress={() => setThemeMode(option.mode)}>
+                  <Text
+                    style={[
+                      styles.themeOptionText,
+                      {color: selected ? palette.accent : palette.textPrimary},
+                    ]}>
+                    {option.label}
+                  </Text>
+                </Pressable>
+              );
+            })}
+          </View>
         </View>
 
         <Pressable style={[styles.reset, {borderColor: palette.danger}]} onPress={confirmReset}>
@@ -142,11 +173,33 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     letterSpacing: 0.3,
   },
-  themeRow: {
+  settingsBlock: {
     marginTop: 18,
+  },
+  sectionLabel: {
+    marginBottom: 6,
+    fontSize: 11,
+    fontWeight: '700',
+    letterSpacing: 0.8,
+    textTransform: 'uppercase',
+  },
+  themeOptionsRow: {
+    marginTop: 10,
     flexDirection: 'row',
+    gap: 8,
+  },
+  themeOption: {
+    flex: 1,
+    borderWidth: 1,
+    borderRadius: 12,
+    paddingVertical: 10,
     alignItems: 'center',
-    justifyContent: 'space-between',
+  },
+  themeOptionText: {
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
   },
   reset: {
     marginTop: 26,

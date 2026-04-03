@@ -5,7 +5,11 @@ const RECORDS_KEY = '@vuim/records';
 const PREFS_KEY = '@vuim/prefs';
 
 const defaultPrefs: AppPreferences = {
-  isDarkMode: false,
+  themeMode: 'system',
+};
+
+type LegacyAppPreferences = {
+  isDarkMode?: boolean;
 };
 
 export const loadRecords = async (): Promise<SubjectRecord[]> => {
@@ -34,10 +38,15 @@ export const loadPrefs = async (): Promise<AppPreferences> => {
     if (!stored) {
       return defaultPrefs;
     }
-    const parsed = JSON.parse(stored) as AppPreferences;
+    const parsed = JSON.parse(stored) as Partial<AppPreferences> & LegacyAppPreferences;
+
+    const migratedThemeMode =
+      parsed.themeMode ??
+      (typeof parsed.isDarkMode === 'boolean' ? (parsed.isDarkMode ? 'dark' : 'light') : undefined);
+
     return {
       ...defaultPrefs,
-      ...parsed,
+      ...(migratedThemeMode ? {themeMode: migratedThemeMode} : {}),
     };
   } catch {
     return defaultPrefs;

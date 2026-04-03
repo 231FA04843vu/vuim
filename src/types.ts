@@ -22,8 +22,10 @@ export type SubjectRecord = {
   updatedAt: string;
 };
 
+export type ThemeMode = 'system' | 'light' | 'dark';
+
 export type AppPreferences = {
-  isDarkMode: boolean;
+  themeMode: ThemeMode;
 };
 
 export type AIMessage = {

@@ -1,6 +1,7 @@
 import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
+import {useColorScheme} from 'react-native';
 import {loadPrefs, loadRecords, savePrefs, saveRecords} from '../storage/subjectsStorage';
-import {ModuleType, SubjectMarksInput, SubjectRecord} from '../types';
+import {ModuleType, SubjectMarksInput, SubjectRecord, ThemeMode} from '../types';
 import {calculateInternalMarks} from '../utils/calculate';
 
 type SubjectPayload = {
@@ -12,11 +13,13 @@ type SubjectPayload = {
 type SubjectsContextType = {
   loading: boolean;
   records: SubjectRecord[];
+  themeMode: ThemeMode;
   isDarkMode: boolean;
   addRecord: (payload: SubjectPayload) => Promise<SubjectRecord>;
   updateRecord: (id: string, payload: SubjectPayload) => Promise<SubjectRecord | null>;
   deleteRecord: (id: string) => Promise<void>;
   resetRecords: () => Promise<void>;
+  setThemeMode: (mode: ThemeMode) => Promise<void>;
   toggleTheme: () => Promise<void>;
   findRecordById: (id: string) => SubjectRecord | undefined;
 };
@@ -26,15 +29,16 @@ const SubjectsContext = createContext<SubjectsContextType | undefined>(undefined
 const newId = () => `${Date.now()}-${Math.random().toString(36).slice(2, 9)}`;
 
 export const SubjectsProvider = ({children}: {children: React.ReactNode}) => {
+  const systemScheme = useColorScheme();
   const [loading, setLoading] = useState(true);
   const [records, setRecords] = useState<SubjectRecord[]>([]);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [themeMode, setThemeModeState] = useState<ThemeMode>('system');
 
   useEffect(() => {
     const bootstrap = async () => {
       const [loadedRecords, loadedPrefs] = await Promise.all([loadRecords(), loadPrefs()]);
       setRecords(loadedRecords);
-      setIsDarkMode(loadedPrefs.isDarkMode);
+      setThemeModeState(loadedPrefs.themeMode);
       setLoading(false);
     };
 
@@ -102,11 +106,19 @@ export const SubjectsProvider = ({children}: {children: React.ReactNode}) => {
     await persistRecords([]);
   }, [persistRecords]);
 
+  const setThemeMode = useCallback(async (mode: ThemeMode) => {
+    setThemeModeState(mode);
+    await savePrefs({themeMode: mode});
+  }, []);
+
+  const resolvedTheme =
+    themeMode === 'system' ? (systemScheme === 'dark' ? 'dark' : 'light') : themeMode;
+  const isDarkMode = resolvedTheme === 'dark';
+
   const toggleTheme = useCallback(async () => {
-    const next = !isDarkMode;
-    setIsDarkMode(next);
-    await savePrefs({isDarkMode: next});
-  }, [isDarkMode]);
+    const nextMode: ThemeMode = isDarkMode ? 'light' : 'dark';
+    await setThemeMode(nextMode);
+  }, [isDarkMode, setThemeMode]);
 
   const findRecordById = useCallback(
     (id: string) => records.find(r => r.id === id),
@@ -117,22 +129,26 @@ export const SubjectsProvider = ({children}: {children: React.ReactNode}) => {
     () => ({
       loading,
       records,
+      themeMode,
       isDarkMode,
       addRecord,
       updateRecord,
       deleteRecord,
       resetRecords,
+      setThemeMode,
       toggleTheme,
       findRecordById,
     }),
     [
       loading,
       records,
+      themeMode,
       isDarkMode,
       addRecord,
       updateRecord,
       deleteRecord,
       resetRecords,
+      setThemeMode,
       toggleTheme,
       findRecordById,
     ],

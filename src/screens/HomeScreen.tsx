@@ -8,11 +8,33 @@ import AnimatedGradientBackground from '../components/AnimatedGradientBackground
 import AnimatedInput from '../components/AnimatedInput';
 import SubjectCard from '../components/SubjectCard';
 import GlassCard from '../components/GlassCard';
+import SideDrawerMenu from '../components/SideDrawerMenu';
+import {APP_VERSION} from '../config/appMeta';
+import {updateNotes} from '../data/updateNotes';
 import {notify} from '../utils/notify';
 import BottomNavBar from '../components/BottomNavBar';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Home'>;
 const WEAK_SUBJECT_THRESHOLD = 60;
+
+const compareSemver = (left: string, right: string) => {
+  const leftParts = left.split('.').map(Number);
+  const rightParts = right.split('.').map(Number);
+  const max = Math.max(leftParts.length, rightParts.length);
+
+  for (let i = 0; i < max; i += 1) {
+    const l = Number.isFinite(leftParts[i]) ? leftParts[i] : 0;
+    const r = Number.isFinite(rightParts[i]) ? rightParts[i] : 0;
+    if (l > r) {
+      return 1;
+    }
+    if (l < r) {
+      return -1;
+    }
+  }
+
+  return 0;
+};
 
 const HomeScreen = ({navigation}: Props) => {
   const {records, deleteRecord, isDarkMode} = useSubjects();
@@ -20,6 +42,7 @@ const HomeScreen = ({navigation}: Props) => {
 
   const [query, setQuery] = useState('');
   const [sortHighToLow, setSortHighToLow] = useState(true);
+  const [drawerVisible, setDrawerVisible] = useState(false);
 
   const data = useMemo(() => {
     const filtered = records.filter(item =>
@@ -43,6 +66,9 @@ const HomeScreen = ({navigation}: Props) => {
       avgPercent,
     };
   }, [records]);
+
+  const latestRelease = updateNotes[0]?.version;
+  const hasUpdate = !!latestRelease && compareSemver(latestRelease, APP_VERSION) > 0;
 
   const confirmDelete = (id: string) => {
     Alert.alert('Delete Subject', 'Do you want to remove this record?', [
@@ -68,6 +94,11 @@ const HomeScreen = ({navigation}: Props) => {
             <Text style={[styles.title, {color: palette.textPrimary}]}>Academic Dashboard</Text>
             <Text style={[styles.subtitle, {color: palette.textMuted}]}>Simple, focused tracking for every subject</Text>
           </View>
+          <Pressable
+            style={[styles.menuButton, {borderColor: palette.cardBorder, backgroundColor: palette.backgroundAlt}]}
+            onPress={() => setDrawerVisible(true)}>
+            <Text style={[styles.menuButtonText, {color: palette.textPrimary}]}>Menu</Text>
+          </Pressable>
         </View>
 
         <GlassCard palette={palette} style={styles.heroCard}>
@@ -84,6 +115,18 @@ const HomeScreen = ({navigation}: Props) => {
             </View>
           </View>
         </GlassCard>
+
+        {hasUpdate && (
+          <GlassCard palette={palette} style={styles.updateCard}>
+            <Text style={[styles.updateTitle, {color: palette.textPrimary}]}>Update Available</Text>
+            <Text style={[styles.updateBody, {color: palette.textSecondary}]}>A newer version ({latestRelease}) is ready. You are on v{APP_VERSION}.</Text>
+            <Pressable
+              style={[styles.updateButton, {backgroundColor: palette.accent}]}
+              onPress={() => navigation.navigate('Updates')}>
+              <Text style={styles.updateButtonText}>View What Is New</Text>
+            </Pressable>
+          </GlassCard>
+        )}
 
         <AnimatedInput
           label="Search Subject"
@@ -130,6 +173,12 @@ const HomeScreen = ({navigation}: Props) => {
       </View>
 
       <BottomNavBar palette={palette} navigation={navigation} current="Home" />
+      <SideDrawerMenu
+        visible={drawerVisible}
+        onClose={() => setDrawerVisible(false)}
+        palette={palette}
+        navigation={navigation}
+      />
     </View>
   );
 };
@@ -146,8 +195,9 @@ const styles = StyleSheet.create({
   topRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    justifyContent: 'flex-start',
+    justifyContent: 'space-between',
     marginBottom: 16,
+    gap: 10,
   },
   overline: {
     fontSize: 11,
@@ -169,8 +219,50 @@ const styles = StyleSheet.create({
     fontFamily: Platform.select(typography.body),
     fontWeight: '500',
   },
+  menuButton: {
+    borderWidth: 1,
+    borderRadius: 999,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  menuButtonText: {
+    fontSize: 11,
+    fontFamily: Platform.select(typography.heading),
+    fontWeight: '700',
+    letterSpacing: 0.7,
+    textTransform: 'uppercase',
+  },
   heroCard: {
     marginBottom: 14,
+  },
+  updateCard: {
+    marginBottom: 14,
+  },
+  updateTitle: {
+    fontSize: 16,
+    fontFamily: Platform.select(typography.heading),
+    fontWeight: '700',
+  },
+  updateBody: {
+    marginTop: 4,
+    fontSize: 13,
+    fontFamily: Platform.select(typography.body),
+    lineHeight: 20,
+  },
+  updateButton: {
+    alignSelf: 'flex-start',
+    marginTop: 10,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+  },
+  updateButtonText: {
+    color: '#FFFFFF',
+    fontSize: 11,
+    fontFamily: Platform.select(typography.heading),
+    fontWeight: '700',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
   },
   heroTitle: {
     fontSize: 17,

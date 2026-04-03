@@ -2,6 +2,27 @@ import {UpdateNote} from '../types';
 
 export const updateNotes: UpdateNote[] = [
   {
+    version: '1.3.2',
+    date: '2026-04-03',
+    title: 'Smart Theme + Better AI Coach Flow',
+    highlights: [
+      'New theme settings in drawer: System, Light, and Dark modes',
+      'AI chat now appears in natural conversation order (You then AI)',
+      'Weekly plan and tasks now render as clear plan steps',
+      'Updates page redesigned with release preview and highlights',
+    ],
+  },
+  {
+    version: '1.3.1',
+    date: '2026-04-03',
+    title: 'Stability Baseline for 1.3 Releases',
+    highlights: [
+      'Improved AI plan parsing reliability',
+      'Polished data cards and navigation transitions',
+      'Prepared internal config for incremental 1.3.x updates',
+    ],
+  },
+  {
     version: '0.3.0',
     date: '2026-04-01',
     title: 'AI Academic Coach',
