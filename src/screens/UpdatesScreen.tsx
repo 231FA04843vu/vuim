@@ -41,8 +41,10 @@ const UpdatesScreen = ({navigation}: Props) => {
   const [releaseVersion] = React.useState(APP_VERSION);
   const [latestReleaseVersion, setLatestReleaseVersion] = React.useState(APP_VERSION);
   const [latestReleaseAt, setLatestReleaseAt] = React.useState('');
+  const [latestDownloadUrl, setLatestDownloadUrl] = React.useState(
+    'https://github.com/231FA04843vu/vuim/releases/latest/download/app-release.apk',
+  );
 
-  const APK_URL = 'https://github.com/231FA04843vu/vuim/releases/latest/download/app-release.apk';
   const pollTimerRef = React.useRef<ReturnType<typeof setInterval> | null>(null);
 
   const clearPoll = React.useCallback(() => {
@@ -80,15 +82,19 @@ const UpdatesScreen = ({navigation}: Props) => {
 
   const refreshReleaseState = React.useCallback(async () => {
     try {
-      const [releaseResponse, apkResponse] = await Promise.all([
-        fetch('https://api.github.com/repos/231FA04843vu/vuim/releases/latest'),
-        fetch(APK_URL, {method: 'HEAD'}),
-      ]);
+      const releaseResponse = await fetch('https://api.github.com/repos/231FA04843vu/vuim/releases/latest');
 
       let fetchedTag = APP_VERSION;
+      let fetchedDownloadUrl = latestDownloadUrl;
 
       if (releaseResponse.ok) {
-        const data = (await releaseResponse.json()) as {tag_name?: string; name?: string; published_at?: string};
+        const data = (await releaseResponse.json()) as {
+          tag_name?: string;
+          name?: string;
+          published_at?: string;
+          html_url?: string;
+          assets?: Array<{name?: string; browser_download_url?: string}>;
+        };
         const tag = (data.tag_name ?? data.name ?? '').trim();
         if (tag) {
           fetchedTag = tag.startsWith('v') ? tag : `v${tag}`;
@@ -97,17 +103,25 @@ const UpdatesScreen = ({navigation}: Props) => {
         if (data.published_at) {
           setLatestReleaseAt(data.published_at);
         }
+        const apkAsset = data.assets?.find(asset => asset.name === 'app-release.apk');
+        if (apkAsset?.browser_download_url) {
+          fetchedDownloadUrl = apkAsset.browser_download_url;
+          setLatestDownloadUrl(apkAsset.browser_download_url);
+        } else if (data.html_url) {
+          fetchedDownloadUrl = `${data.html_url}/download/app-release.apk`;
+          setLatestDownloadUrl(fetchedDownloadUrl);
+        }
       }
 
-      const available = apkResponse.ok && fetchedTag !== APP_VERSION;
+      const available = fetchedTag !== APP_VERSION;
       setIsUpdateAvailable(available);
       setHasCheckedForUpdates(true);
-      return {exists: apkResponse.ok, available, latestVersion: fetchedTag};
+      return {exists: true, available, latestVersion: fetchedTag, downloadUrl: fetchedDownloadUrl};
     } catch {
       setIsUpdateAvailable(false);
-      return {exists: false, available: false, latestVersion: APP_VERSION};
+      return {exists: false, available: false, latestVersion: APP_VERSION, downloadUrl: latestDownloadUrl};
     }
-  }, [APK_URL]);
+  }, [latestDownloadUrl]);
 
   React.useEffect(() => {
     runPendingCleanupIfUpdated();
@@ -195,7 +209,7 @@ const UpdatesScreen = ({navigation}: Props) => {
         setDownloadProgress(0);
         setDownloadLabel('Downloading update...');
 
-        const downloadId = await startInAppApkDownload(APK_URL);
+        const downloadId = await startInAppApkDownload(result.downloadUrl);
 
         pollTimerRef.current = setInterval(async () => {
           try {
@@ -244,7 +258,7 @@ const UpdatesScreen = ({navigation}: Props) => {
       }
     }
 
-    const canOpen = await Linking.canOpenURL(APK_URL);
+    const canOpen = await Linking.canOpenURL(result.downloadUrl);
     if (!canOpen) {
       notify('Unable to download update');
       setIsDownloading(false);
@@ -252,7 +266,7 @@ const UpdatesScreen = ({navigation}: Props) => {
     }
 
     try {
-      await Linking.openURL(APK_URL);
+      await Linking.openURL(result.downloadUrl);
       await addNotification({
         title: 'Update Download Started',
         message: 'The latest APK is downloading. Complete installation to update the app.',

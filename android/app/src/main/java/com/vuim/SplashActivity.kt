@@ -22,7 +22,11 @@ class SplashActivity : Activity() {
 
     // Keep splash visible long enough for users to see the welcome animation.
     Handler(Looper.getMainLooper()).postDelayed({
-      startActivity(Intent(this, MainActivity::class.java))
+      startActivity(Intent(this, MainActivity::class.java).apply {
+        intent?.extras?.let { putExtras(it) }
+        intent?.action?.let { action = it }
+        intent?.data?.let { data = it }
+      })
       finish()
     }, 2200)
   }
