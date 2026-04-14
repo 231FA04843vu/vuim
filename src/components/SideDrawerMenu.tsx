@@ -20,6 +20,7 @@ import {APP_VERSION} from '../config/appMeta';
 import {Palette, typography} from '../theme';
 import {RootStackParamList} from '../navigation/types';
 import {notify} from '../utils/notify';
+import {getLatestReleaseInfo} from '../utils/releaseInfo';
 
 type Props = {
   visible: boolean;
@@ -38,7 +39,7 @@ const SideDrawerMenu = ({visible, onClose, palette, navigation}: Props) => {
   const {themeMode, setThemeMode, clearCache, clearData, toggleTheme} = useSubjects();
   const translateX = useRef(new Animated.Value(-320)).current;
   const overlayOpacity = useRef(new Animated.Value(0)).current;
-  const [releaseVersion, setReleaseVersion] = React.useState('v1.3.7');
+  const [releaseVersion, setReleaseVersion] = React.useState(`v${APP_VERSION}`);
 
   useEffect(() => {
     Animated.parallel([
@@ -57,23 +58,13 @@ const SideDrawerMenu = ({visible, onClose, palette, navigation}: Props) => {
 
   useEffect(() => {
     const loadReleaseVersion = async () => {
-      try {
-        const response = await fetch('https://api.github.com/repos/231FA04843vu/vuim/releases/latest');
-        if (!response.ok) {
-          return;
-        }
-
-        const data = (await response.json()) as {tag_name?: string; name?: string};
-        const tag = (data.tag_name ?? data.name ?? '').trim();
-        if (tag) {
-          setReleaseVersion(tag.startsWith('v') ? tag : `v${tag}`);
-        }
-      } catch {
-        // Keep fallback release tag.
+      const latest = await getLatestReleaseInfo();
+      if (latest?.tag) {
+        setReleaseVersion(latest.tag);
       }
     };
 
-    loadReleaseVersion();
+    void loadReleaseVersion();
   }, []);
 
   const goTo = (screen: keyof RootStackParamList) => {

@@ -1,5 +1,7 @@
-import React, {createContext, useCallback, useContext, useMemo, useState} from 'react';
+import React, {createContext, useCallback, useContext, useEffect, useMemo, useState} from 'react';
 import {AppNotification, NotificationCategory} from '../types';
+import {loadNotificationPrefs, saveNotificationPrefs} from '../storage/notificationStorage';
+import {setSystemNotificationsRuntimeEnabled, syncFcmTopicSubscription} from '../utils/fcm';
 
 type AddNotificationInput = {
   title: string;
@@ -28,6 +30,41 @@ export const NotificationsProvider = ({children}: {children: React.ReactNode}) =
   const [notifications, setNotifications] = useState<AppNotification[]>([]);
   const [systemNotificationsEnabled, setSystemNotificationsEnabledState] = useState(true);
   const [inAppNotificationsEnabled, setInAppNotificationsEnabledState] = useState(true);
+  const [hydrated, setHydrated] = useState(false);
+
+  useEffect(() => {
+    const bootstrap = async () => {
+      const prefs = await loadNotificationPrefs();
+      setSystemNotificationsEnabledState(prefs.systemNotificationsEnabled);
+      setInAppNotificationsEnabledState(prefs.inAppNotificationsEnabled);
+      setHydrated(true);
+    };
+
+    bootstrap();
+  }, []);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    void saveNotificationPrefs({
+      systemNotificationsEnabled,
+      inAppNotificationsEnabled,
+    });
+  }, [hydrated, inAppNotificationsEnabled, systemNotificationsEnabled]);
+
+  useEffect(() => {
+    setSystemNotificationsRuntimeEnabled(systemNotificationsEnabled);
+  }, [systemNotificationsEnabled]);
+
+  useEffect(() => {
+    if (!hydrated) {
+      return;
+    }
+
+    void syncFcmTopicSubscription(systemNotificationsEnabled);
+  }, [hydrated, systemNotificationsEnabled]);
 
   const addNotification = useCallback(
     async ({title, message, category}: AddNotificationInput) => {

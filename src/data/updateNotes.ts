@@ -1,6 +1,19 @@
 import {UpdateNote} from '../types';
 
+
 export const updateNotes: UpdateNote[] = [
+  {
+    version: '1.4.2',
+    date: '2026-04-14',
+    title: 'Smoother Updates and Better Daily Experience',
+    highlights: [
+      'Faster app startup with a cleaner splash experience',
+      'Notification settings now stay saved after reopening the app',
+      'Screen switching is now smoother without slide-style transitions',
+      'What\'s New is shown before you update so you can decide confidently',
+      'Update alerts are more reliable and easier to manage from settings',
+    ],
+  },
   {
     version: '1.4.1',
     date: '2026-04-03',

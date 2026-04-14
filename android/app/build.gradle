@@ -32,8 +32,8 @@ android {
         applicationId "com.vuim"
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
-        versionCode 141
-        versionName "1.4.1"
+        versionCode 142
+        versionName "1.4.2"
     }
 
     signingConfigs {
@@ -64,7 +64,7 @@ android {
 
 dependencies {
     implementation("com.facebook.react:react-android")
-    implementation("com.github.LottieFiles:dotlottie-android:0.13.2")
+    implementation("androidx.core:core-splashscreen:1.0.1")
 
     if (hermesEnabled.toBoolean()) {
         implementation("com.facebook.react:hermes-android")

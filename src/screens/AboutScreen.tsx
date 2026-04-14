@@ -5,16 +5,15 @@ import {useSafeAreaInsets} from 'react-native-safe-area-context';
 import Ionicons from '@react-native-vector-icons/ionicons';
 import {useSubjects} from '../context/SubjectsContext';
 import AnimatedGradientBackground from '../components/AnimatedGradientBackground';
+import {APP_VERSION} from '../config/appMeta';
 import {darkPalette, lightPalette, typography} from '../theme';
 import {RootStackParamList} from '../navigation/types';
 import HamburgerButton from '../components/HamburgerButton';
 import SideDrawerMenu from '../components/SideDrawerMenu';
+import {getLatestReleaseInfo} from '../utils/releaseInfo';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'AboutApp'>;
 
-const localAppVersion = (require('../../package.json') as {version?: string}).version ?? '1.0.0';
-const releaseMeta = require('../../app.json') as {expo?: {version?: string}};
-const androidReleaseVersion = releaseMeta.expo?.version ?? '1.0.0';
 const pkg = require('../../package.json') as {
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
@@ -25,7 +24,7 @@ const AboutScreen = ({navigation}: Props) => {
   const {isDarkMode} = useSubjects();
   const palette = isDarkMode ? darkPalette : lightPalette;
   const [menuVisible, setMenuVisible] = React.useState(false);
-  const [releaseVersion, setReleaseVersion] = React.useState(localAppVersion);
+  const [releaseVersion, setReleaseVersion] = React.useState(`v${APP_VERSION}`);
   const androidDeviceRelease =
     Platform.OS === 'android' ? String((Platform.constants as {Release?: string}).Release ?? Platform.Version) : 'N/A';
   const securityPatch =
@@ -40,23 +39,13 @@ const AboutScreen = ({navigation}: Props) => {
 
   React.useEffect(() => {
     const loadReleaseVersion = async () => {
-      try {
-        const response = await fetch('https://api.github.com/repos/231FA04843vu/vuim/releases/latest');
-        if (!response.ok) {
-          return;
-        }
-
-        const data = (await response.json()) as {tag_name?: string; name?: string};
-        const tag = (data.tag_name ?? data.name ?? '').trim();
-        if (tag) {
-          setReleaseVersion(tag.replace(/^v/i, ''));
-        }
-      } catch {
-        setReleaseVersion(localAppVersion);
+      const latest = await getLatestReleaseInfo();
+      if (latest?.tag) {
+        setReleaseVersion(latest.tag);
       }
     };
 
-    loadReleaseVersion();
+    void loadReleaseVersion();
   }, []);
 
   const termsContent = `
@@ -72,8 +61,8 @@ The app provides local calculations, record tracking, notification reminders, an
 SECTION 4: CONFIGURATION DISCLOSURE
 Application Name: VUIM
 Application Package: com.vuim
-App Version (JS): ${localAppVersion}
-Release Version (App Config): ${androidReleaseVersion}
+Installed App Version: ${APP_VERSION}
+GitHub Latest Release: ${releaseVersion}
 Runtime Android Version: ${androidDeviceRelease}
 Security Patch Level: ${securityPatch}
 
@@ -128,8 +117,8 @@ Android builds run through Gradle with React Native integration. The pipeline in
 
 SECTION 2: ACTIVE BUILD CONFIGURATION SNAPSHOT
 Application ID: com.vuim
-Default Version Name: 1.0
-Default Version Code: 1
+Installed App Version: ${APP_VERSION}
+GitHub Latest Release: ${releaseVersion}
 Build Type Used For Testing: debug
 Hermes Engine: enabled
 Packaging Rule: pickFirst for **/libc++_shared.so
@@ -172,7 +161,7 @@ Build logs should be used to inspect task failures, compatibility warnings, depe
 
         <View style={[styles.sectionBlock, {borderColor: palette.cardBorder}]}> 
           <Text style={[styles.sectionTitle, {color: palette.textPrimary}]}>Version and Security</Text>
-          <Text style={[styles.paragraph, {color: palette.textSecondary}]}>Android Version (Release): {androidReleaseVersion}. App Version (Git Release): {releaseVersion}. Device Android Runtime: {androidDeviceRelease}. Security Patch Level: {securityPatch}.</Text>
+          <Text style={[styles.paragraph, {color: palette.textSecondary}]}>Installed App Version: {APP_VERSION}. GitHub Latest Release: {releaseVersion}. Device Android Runtime: {androidDeviceRelease}. Security Patch Level: {securityPatch}.</Text>
         </View>
 
         <View style={[styles.sectionBlock, {borderColor: palette.cardBorder}]}> 

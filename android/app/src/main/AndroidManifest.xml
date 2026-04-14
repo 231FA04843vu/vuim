@@ -14,22 +14,17 @@
         android:theme="@style/AppTheme">
 
         <activity
-            android:name=".SplashActivity"
+            android:name=".MainActivity"
+            android:label="vuim"
             android:exported="true"
-            android:theme="@style/AppTheme">
+            android:theme="@style/LaunchTheme"
+            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
+            android:windowSoftInputMode="adjustResize"
+            android:launchMode="singleTask">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
-        </activity>
-
-        <activity
-            android:name=".MainActivity"
-            android:label="vuim"
-            android:exported="true"
-            android:configChanges="keyboard|keyboardHidden|orientation|screenSize|uiMode"
-            android:windowSoftInputMode="adjustResize"
-            android:launchMode="singleTask">
         </activity>
 
         <provider

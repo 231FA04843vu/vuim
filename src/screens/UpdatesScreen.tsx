@@ -13,6 +13,7 @@ import {updateNotes} from '../data/updateNotes';
 import {useNotifications} from '../context/NotificationsContext';
 import {useSubjects} from '../context/SubjectsContext';
 import {RootStackParamList} from '../navigation/types';
+import {loadCachedLatestRelease} from '../storage/updateStorage';
 import {darkPalette, lightPalette, typography} from '../theme';
 import {
   cleanupInAppDownloadedApk,
@@ -21,6 +22,7 @@ import {
   startInAppApkDownload,
 } from '../utils/inAppUpdate';
 import {notify} from '../utils/notify';
+import {fetchAndCacheLatestRelease} from '../utils/releaseInfo';
 
 type Props = NativeStackScreenProps<RootStackParamList, 'Updates'>;
 
@@ -67,7 +69,6 @@ const UpdatesScreen = ({navigation}: Props) => {
   const [downloadProgress, setDownloadProgress] = React.useState(0);
   const [downloadLabel, setDownloadLabel] = React.useState('Downloading...');
   const [menuVisible, setMenuVisible] = React.useState(false);
-  const [releaseVersion] = React.useState(APP_VERSION);
   const [latestReleaseVersion, setLatestReleaseVersion] = React.useState(APP_VERSION);
   const [latestReleaseAt, setLatestReleaseAt] = React.useState('');
   const [latestDownloadUrl, setLatestDownloadUrl] = React.useState(
@@ -117,36 +118,13 @@ const UpdatesScreen = ({navigation}: Props) => {
 
   const refreshReleaseState = React.useCallback(async (): Promise<ReleaseState> => {
     try {
-      const releaseResponse = await fetch('https://api.github.com/repos/231FA04843vu/vuim/releases/latest');
+      const release = await fetchAndCacheLatestRelease();
+      const fetchedTag = release.tag;
+      const fetchedDownloadUrl = release.downloadUrl || latestDownloadUrl;
 
-      let fetchedTag = APP_VERSION;
-      let fetchedDownloadUrl = latestDownloadUrl;
-
-      if (releaseResponse.ok) {
-        const data = (await releaseResponse.json()) as {
-          tag_name?: string;
-          name?: string;
-          published_at?: string;
-          html_url?: string;
-          assets?: Array<{name?: string; browser_download_url?: string}>;
-        };
-        const tag = (data.tag_name ?? data.name ?? '').trim();
-        if (tag) {
-          fetchedTag = tag.startsWith('v') ? tag : `v${tag}`;
-          setLatestReleaseVersion(fetchedTag);
-        }
-        if (data.published_at) {
-          setLatestReleaseAt(data.published_at);
-        }
-        const apkAsset = data.assets?.find(asset => asset.name === 'app-release.apk');
-        if (apkAsset?.browser_download_url) {
-          fetchedDownloadUrl = apkAsset.browser_download_url;
-          setLatestDownloadUrl(apkAsset.browser_download_url);
-        } else if (data.html_url) {
-          fetchedDownloadUrl = `${data.html_url}/download/app-release.apk`;
-          setLatestDownloadUrl(fetchedDownloadUrl);
-        }
-      }
+      setLatestReleaseVersion(fetchedTag);
+      setLatestReleaseAt(release.publishedAt);
+      setLatestDownloadUrl(fetchedDownloadUrl);
 
       const available = compareVersions(fetchedTag, APP_VERSION) > 0;
       setIsUpdateAvailable(available);
@@ -159,6 +137,27 @@ const UpdatesScreen = ({navigation}: Props) => {
         source: 'github',
       };
     } catch {
+      const cachedRelease = await loadCachedLatestRelease();
+      if (cachedRelease) {
+        setLatestReleaseVersion(cachedRelease.tag);
+        setLatestReleaseAt(cachedRelease.publishedAt);
+        if (cachedRelease.downloadUrl) {
+          setLatestDownloadUrl(cachedRelease.downloadUrl);
+        }
+
+        const available = compareVersions(cachedRelease.tag, APP_VERSION) > 0;
+        setIsUpdateAvailable(available);
+        setHasCheckedForUpdates(true);
+
+        return {
+          exists: false,
+          available,
+          latestVersion: cachedRelease.tag,
+          downloadUrl: cachedRelease.downloadUrl || latestDownloadUrl,
+          source: 'none',
+        };
+      }
+
       setIsUpdateAvailable(false);
       return {
         exists: false,
@@ -352,8 +351,8 @@ const UpdatesScreen = ({navigation}: Props) => {
             <Text style={[styles.title, {color: palette.textPrimary}]}>Updates</Text>
             <Text style={[styles.subtitle, {color: palette.textMuted}]}>Tap once to check for new versions</Text>
             <View style={[styles.versionPill, {backgroundColor: palette.accentSoft}]}>
-              <Text style={[styles.versionLabel, {color: palette.textSecondary}]}>Current version</Text>
-              <Text style={[styles.versionValue, {color: palette.textPrimary}]}>{releaseVersion}</Text>
+              <Text style={[styles.versionLabel, {color: palette.textSecondary}]}>Latest release</Text>
+              <Text style={[styles.versionValue, {color: palette.textPrimary}]}>{latestReleaseVersion}</Text>
             </View>
             {!!latestReleaseAt && (
               <Text style={[styles.subtitle, {color: palette.textMuted}]}>Latest GitHub release synced live.</Text>
@@ -429,8 +428,8 @@ const UpdatesScreen = ({navigation}: Props) => {
           <GlassCard palette={palette} style={styles.card}>
             <Text style={[styles.version, {color: palette.accent}]}>{latestReleaseVersion}</Text>
             <Text style={[styles.cardTitle, {color: palette.textPrimary}]}>What&apos;s New</Text>
-            <Text style={[styles.highlight, {color: palette.textPrimary}]}>Release notes for this version are not yet available in-app.</Text>
-            <Text style={[styles.highlight, {color: palette.textPrimary}]}>You can still continue installing this update.</Text>
+            <Text style={[styles.highlight, {color: palette.textPrimary}]}>Release notes for this version will be shown here soon.</Text>
+            <Text style={[styles.highlight, {color: palette.textPrimary}]}>You can continue updating now for the latest improvements.</Text>
           </GlassCard>
         )}
       </ScrollView>

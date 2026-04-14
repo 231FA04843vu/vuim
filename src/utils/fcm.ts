@@ -4,6 +4,11 @@ import {notify} from './notify';
 import {pushSystemUpdateNotification} from './updateNotifier';
 
 export const RELEASE_TOPIC = 'vuim_updates';
+let systemNotificationsEnabled = true;
+
+export const setSystemNotificationsRuntimeEnabled = (enabled: boolean) => {
+  systemNotificationsEnabled = enabled;
+};
 
 const ensureAndroidNotificationPermission = async () => {
   if (Platform.OS !== 'android') {
@@ -31,8 +36,19 @@ const ensureAndroidNotificationPermission = async () => {
   return result === PermissionsAndroid.RESULTS.GRANTED;
 };
 
-export const bootstrapFcm = async () => {
+export const syncFcmTopicSubscription = async (enabled: boolean) => {
+  setSystemNotificationsRuntimeEnabled(enabled);
+
   if (Platform.OS !== 'android') {
+    return;
+  }
+
+  if (!enabled) {
+    try {
+      await messaging().unsubscribeFromTopic(RELEASE_TOPIC);
+    } catch {
+      // Unsubscribe is best effort when app has not been fully registered yet.
+    }
     return;
   }
 
@@ -53,6 +69,14 @@ export const bootstrapFcm = async () => {
 
   await messaging().registerDeviceForRemoteMessages();
   await messaging().subscribeToTopic(RELEASE_TOPIC);
+};
+
+export const bootstrapFcm = async (enabled = true) => {
+  await syncFcmTopicSubscription(enabled);
+
+  if (Platform.OS !== 'android' || !enabled) {
+    return;
+  }
 
   const token = await messaging().getToken();
   if (token) {
@@ -66,6 +90,10 @@ export const registerForegroundFcmHandler = () => {
   }
 
   return messaging().onMessage(async remoteMessage => {
+    if (!systemNotificationsEnabled) {
+      return;
+    }
+
     const title = remoteMessage.notification?.title ?? 'VUIM Update';
     const body = remoteMessage.notification?.body ?? 'A new version is available.';
 

@@ -10,6 +10,7 @@ import {RootStackParamList} from './src/navigation/types';
 import {APP_VERSION} from './src/config/appMeta';
 import {loadLastPromptedRelease, saveLastPromptedRelease} from './src/storage/updateStorage';
 import {bootstrapFcm, registerForegroundFcmHandler} from './src/utils/fcm';
+import {getLatestReleaseInfo} from './src/utils/releaseInfo';
 
 const compareVersions = (left: string, right: string): number => {
   const normalize = (value: string) =>
@@ -49,17 +50,11 @@ const App = () => {
   }, [navigationRef]);
 
   const fetchLatestReleaseTag = useCallback(async () => {
-    const response = await fetch('https://api.github.com/repos/231FA04843vu/vuim/releases/latest');
-    if (!response.ok) {
+    const release = await getLatestReleaseInfo();
+    if (!release?.tag) {
       return null;
     }
-
-    const data = (await response.json()) as {tag_name?: string; name?: string};
-    const raw = (data.tag_name ?? data.name ?? '').trim();
-    if (!raw) {
-      return null;
-    }
-    return raw.startsWith('v') ? raw : `v${raw}`;
+    return release.tag;
   }, []);
 
   const runInAppUpdatePrompt = useCallback(async () => {
@@ -113,7 +108,8 @@ const App = () => {
   }, [fetchLatestReleaseTag, navigationRef, openUpdatesScreen]);
 
   useEffect(() => {
-    bootstrapFcm().catch(error => {
+    // NotificationsContext hydrates the saved user preference and then syncs FCM topic state.
+    bootstrapFcm(false).catch(error => {
       console.warn('FCM bootstrap failed', error);
     });
 

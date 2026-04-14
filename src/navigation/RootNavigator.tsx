@@ -46,9 +46,9 @@ export const RootNavigator = ({ onReady, initialRouteName = 'Splash', navigation
         initialRouteName={initialRouteName}
         screenOptions={{
           headerShown: false,
-          animation: 'ios_from_right',
-          gestureEnabled: true,
-          fullScreenGestureEnabled: true,
+          animation: 'none',
+          gestureEnabled: false,
+          fullScreenGestureEnabled: false,
           presentation: 'card',
         }}>
         <Stack.Screen name="Splash" component={SplashScreen} />
